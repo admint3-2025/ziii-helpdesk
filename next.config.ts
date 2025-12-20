@@ -35,6 +35,9 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
+              // Note: 'unsafe-eval' and 'unsafe-inline' are used for Next.js development and some runtime features.
+              // In production, consider migrating to nonces or strict-dynamic for better security.
+              // Next.js uses eval() for hot module replacement in development and inline scripts for hydration.
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",

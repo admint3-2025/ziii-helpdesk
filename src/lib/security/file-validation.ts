@@ -127,7 +127,6 @@ export async function validateFileUpload(file: File): Promise<{
   // Check MIME type
   const ALLOWED_TYPES = [
     'image/jpeg',
-    'image/jpg',
     'image/png',
     'image/gif',
     'image/webp',
@@ -139,7 +138,10 @@ export async function validateFileUpload(file: File): Promise<{
     'text/plain',
   ]
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  // Normalize MIME type (some browsers report image/jpg instead of image/jpeg)
+  const normalizedType = file.type === 'image/jpg' ? 'image/jpeg' : file.type
+
+  if (!ALLOWED_TYPES.includes(normalizedType)) {
     return {
       valid: false,
       error: 'Tipo de archivo no permitido',

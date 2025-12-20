@@ -10,15 +10,21 @@ type RateLimitStore = {
 
 const store = new Map<string, RateLimitStore>()
 
-// Clean up expired entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, value] of store.entries()) {
-    if (value.resetAt < now) {
-      store.delete(key)
-    }
+// Clean up expired entries - lazy initialization to avoid issues in serverless
+let cleanupIntervalId: NodeJS.Timeout | null = null
+
+function initCleanup() {
+  if (cleanupIntervalId === null) {
+    cleanupIntervalId = setInterval(() => {
+      const now = Date.now()
+      for (const [key, value] of store.entries()) {
+        if (value.resetAt < now) {
+          store.delete(key)
+        }
+      }
+    }, 5 * 60 * 1000)
   }
-}, 5 * 60 * 1000)
+}
 
 export type RateLimitConfig = {
   maxRequests: number
@@ -26,6 +32,9 @@ export type RateLimitConfig = {
 }
 
 export function rateLimit(identifier: string, config: RateLimitConfig): boolean {
+  // Initialize cleanup on first use
+  initCleanup()
+  
   const now = Date.now()
   const entry = store.get(identifier)
 

@@ -44,21 +44,29 @@ export async function logAuthEvent(
   }
 }
 
-// Track failed login attempts per email
+// Track failed login attempts per email - lazy initialization
 const failedLoginAttempts = new Map<string, { count: number; lastAttempt: number }>()
+let cleanupIntervalId: NodeJS.Timeout | null = null
 
-// Clean up old entries every 15 minutes
-setInterval(() => {
-  const now = Date.now()
-  const timeout = 15 * 60 * 1000 // 15 minutes
-  for (const [email, data] of failedLoginAttempts.entries()) {
-    if (now - data.lastAttempt > timeout) {
-      failedLoginAttempts.delete(email)
-    }
+// Initialize cleanup on first use to avoid issues in serverless
+function initCleanup() {
+  if (cleanupIntervalId === null) {
+    cleanupIntervalId = setInterval(() => {
+      const now = Date.now()
+      const timeout = 15 * 60 * 1000 // 15 minutes
+      for (const [email, data] of failedLoginAttempts.entries()) {
+        if (now - data.lastAttempt > timeout) {
+          failedLoginAttempts.delete(email)
+        }
+      }
+    }, 15 * 60 * 1000)
   }
-}, 15 * 60 * 1000)
+}
 
 export function recordFailedLogin(email: string): void {
+  // Initialize cleanup on first use
+  initCleanup()
+  
   const entry = failedLoginAttempts.get(email)
   const now = Date.now()
 

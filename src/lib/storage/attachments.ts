@@ -28,7 +28,15 @@ export async function uploadTicketAttachment(
   // Generar nombre único para evitar colisiones y sanitizar
   const timestamp = Date.now()
   const randomStr = Math.random().toString(36).substring(2, 8)
-  const fileExt = file.name.split('.').pop()
+  
+  // Validate and extract file extension
+  const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt']
+  const parts = file.name.split('.')
+  const originalExt = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : ''
+  
+  // Ensure extension is in allowlist
+  const fileExt = allowedExtensions.includes(originalExt) ? originalExt : 'bin'
+  
   const sanitizedName = sanitizeFilename(file.name)
   const fileName = `${ticketId}/${timestamp}-${randomStr}.${fileExt}`
 

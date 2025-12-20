@@ -70,13 +70,39 @@ export const createTicketSchema = z.object({
   requester_id: uuidSchema.optional(),
 })
 
-// Sanitize filename to prevent directory traversal and XSS
+/**
+ * Sanitize filename to prevent directory traversal and XSS
+ */
 export function sanitizeFilename(filename: string): string {
-  return filename
+  // Reserved Windows filenames
+  const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 
+                          'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 
+                          'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9']
+  
+  // Get filename without extension
+  const lastDot = filename.lastIndexOf('.')
+  const name = lastDot > 0 ? filename.substring(0, lastDot) : filename
+  const ext = lastDot > 0 ? filename.substring(lastDot) : ''
+  
+  // Sanitize the name part
+  let sanitized = name
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/\.{2,}/g, '_')
     .replace(/^\.+/, '')
-    .slice(0, 255)
+    .slice(0, 200) // Leave room for extension
+  
+  // Check for reserved names
+  if (reservedNames.includes(sanitized.toUpperCase())) {
+    sanitized = `file_${sanitized}`
+  }
+  
+  // Ensure we have at least some content
+  if (!sanitized || sanitized.length === 0) {
+    sanitized = 'file'
+  }
+  
+  // Add back the extension (already sanitized by earlier regex)
+  return (sanitized + ext).slice(0, 255)
 }
 
 // Validate and sanitize HTML input (for now, just strip it)
