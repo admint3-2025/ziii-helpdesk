@@ -352,8 +352,9 @@ export function ticketStatusChangedEmailTemplate(params: {
   changedBy: string
   ticketUrl: string
   recipientName: string
+  resolution?: string
 }) {
-  const { ticketNumber, title, oldStatus, newStatus, changedBy, ticketUrl, recipientName } = params
+  const { ticketNumber, title, oldStatus, newStatus, changedBy, ticketUrl, recipientName, resolution } = params
 
   const subject = `🔄 Actualización Ticket #${ticketNumber}`
 
