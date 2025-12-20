@@ -1,22 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-
-type Role = 'requester' | 'agent_l1' | 'agent_l2' | 'supervisor' | 'auditor' | 'admin'
-
-function isValidEmail(email: unknown): email is string {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
-
-function isValidRole(role: unknown): role is Role {
-  return (
-    role === 'requester' ||
-    role === 'agent_l1' ||
-    role === 'agent_l2' ||
-    role === 'supervisor' ||
-    role === 'auditor' ||
-    role === 'admin'
-  )
-}
+import { rateLimit, getClientIdentifier } from '@/lib/security/rate-limit'
+import { createUserSchema, passwordSchema } from '@/lib/security/validation'
 
 export async function GET() {
   const supabase = await createSupabaseServerClient()
@@ -69,6 +54,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting: 10 user creations per hour per IP
+  const identifier = getClientIdentifier(request)
+  const allowed = rateLimit(`admin-create-user:${identifier}`, {
+    maxRequests: 10,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!allowed) {
+    return new Response('Too many user creation requests. Please try again later.', { status: 429 })
+  }
+
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -86,24 +82,26 @@ export async function POST(request: Request) {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const email = body?.email
-  const fullName = typeof body?.full_name === 'string' ? body.full_name.trim() : ''
-  const role = body?.role
-  const department = typeof body?.department === 'string' ? body.department.trim() : ''
-  const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
-  const building = typeof body?.building === 'string' ? body.building.trim() : ''
-  const floor = typeof body?.floor === 'string' ? body.floor.trim() : ''
-  const position = typeof body?.position === 'string' ? body.position.trim() : ''
-  const invite = body?.invite !== false
-  const password = typeof body?.password === 'string' ? body.password : null
+  // Validate with Zod
+  const validation = createUserSchema.safeParse(body)
+  if (!validation.success) {
+    const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+    return new Response(`Validation error: ${errors}`, { status: 400 })
+  }
 
-  if (!isValidEmail(email)) return new Response('Invalid email', { status: 400 })
-  if (!isValidRole(role)) return new Response('Invalid role', { status: 400 })
+  const validatedData = validation.data
+  const invite = validatedData.invite !== false
+
+  // If not inviting, validate password strength
   if (!invite) {
-    if (!password || password.length < 8) {
-      return new Response('Password requerido (mínimo 8 caracteres) cuando no se envía invitación.', {
-        status: 400,
-      })
+    if (!validatedData.password) {
+      return new Response('Password requerido cuando no se envía invitación.', { status: 400 })
+    }
+    
+    const passwordValidation = passwordSchema.safeParse(validatedData.password)
+    if (!passwordValidation.success) {
+      const errors = passwordValidation.error.errors.map(e => e.message).join(', ')
+      return new Response(errors, { status: 400 })
     }
   }
 
@@ -111,14 +109,14 @@ export async function POST(request: Request) {
 
   // Create user in Auth (invite by default)
   const created = invite
-    ? await admin.auth.admin.inviteUserByEmail(email, {
-        data: fullName ? { full_name: fullName } : undefined,
+    ? await admin.auth.admin.inviteUserByEmail(validatedData.email, {
+        data: validatedData.full_name ? { full_name: validatedData.full_name } : undefined,
       })
     : await admin.auth.admin.createUser({
-        email,
-        password: password ?? undefined,
+        email: validatedData.email,
+        password: validatedData.password ?? undefined,
         email_confirm: true,
-        user_metadata: fullName ? { full_name: fullName } : undefined,
+        user_metadata: validatedData.full_name ? { full_name: validatedData.full_name } : undefined,
       })
 
   if (created.error || !created.data.user) {
@@ -130,13 +128,13 @@ export async function POST(request: Request) {
   // Ensure profile exists with proper role
   const { error: upsertErr } = await admin.from('profiles').upsert({
     id: newUserId,
-    full_name: fullName || null,
-    role,
-    department: department || null,
-    phone: phone || null,
-    building: building || null,
-    floor: floor || null,
-    position: position || null,
+    full_name: validatedData.full_name || null,
+    role: validatedData.role,
+    department: validatedData.department || null,
+    phone: validatedData.phone || null,
+    building: validatedData.building || null,
+    floor: validatedData.floor || null,
+    position: validatedData.position || null,
   })
 
   if (upsertErr) {
@@ -150,17 +148,17 @@ export async function POST(request: Request) {
     action: 'CREATE',
     actor_id: user.id,
     metadata: {
-      email,
-      role,
-      department,
+      email: validatedData.email,
+      role: validatedData.role,
+      department: validatedData.department,
       invite,
     },
   })
 
   return Response.json({
     id: newUserId,
-    email,
-    role,
+    email: validatedData.email,
+    role: validatedData.role,
     invite,
   })
 }

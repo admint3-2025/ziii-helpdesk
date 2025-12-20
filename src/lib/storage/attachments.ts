@@ -1,46 +1,14 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { validateFileUpload } from '@/lib/security/file-validation'
+import { sanitizeFilename } from '@/lib/security/validation'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_FILE_TYPES = [
-  'image/jpeg',
-  'image/jpg', 
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-]
 
 export type UploadResult = {
   success: boolean
   path?: string
   publicUrl?: string
   error?: string
-}
-
-/**
- * Valida si un archivo es permitido
- */
-export function validateFile(file: File): { valid: boolean; error?: string } {
-  if (file.size > MAX_FILE_SIZE) {
-    return {
-      valid: false,
-      error: `El archivo es demasiado grande. Máximo permitido: 10MB`,
-    }
-  }
-
-  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-    return {
-      valid: false,
-      error: `Tipo de archivo no permitido. Permitidos: imágenes, PDF, Word, Excel, texto`,
-    }
-  }
-
-  return { valid: true }
 }
 
 /**
@@ -51,17 +19,19 @@ export async function uploadTicketAttachment(
   file: File,
   userId: string
 ): Promise<UploadResult> {
-  const validation = validateFile(file)
+  // Comprehensive validation including magic number checking
+  const validation = await validateFileUpload(file)
   if (!validation.valid) {
     return { success: false, error: validation.error }
   }
 
   const supabase = createSupabaseBrowserClient()
 
-  // Generar nombre único para evitar colisiones
+  // Generar nombre único para evitar colisiones y sanitizar
   const timestamp = Date.now()
   const randomStr = Math.random().toString(36).substring(2, 8)
   const fileExt = file.name.split('.').pop()
+  const sanitizedName = sanitizeFilename(file.name)
   const fileName = `${ticketId}/${timestamp}-${randomStr}.${fileExt}`
 
   try {
@@ -83,12 +53,12 @@ export async function uploadTicketAttachment(
       .from('ticket-attachments')
       .getPublicUrl(fileName)
 
-    // Registrar en la base de datos
+    // Registrar en la base de datos con nombre sanitizado
     const { error: dbError } = await supabase
       .from('ticket_attachments')
       .insert({
         ticket_id: ticketId,
-        file_name: file.name,
+        file_name: sanitizedName,
         file_size: file.size,
         file_type: file.type,
         storage_path: fileName,
