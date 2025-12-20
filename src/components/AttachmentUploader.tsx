@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { validateFile, formatFileSize, getFileIcon } from '@/lib/storage/attachments'
+import { formatFileSize, getFileIcon } from '@/lib/storage/attachments'
+import { validateFileUpload } from '@/lib/security/file-validation'
 
 type AttachmentFile = {
   file: File
@@ -18,7 +19,7 @@ export default function AttachmentUploader({ onFilesChange, maxFiles = 5 }: Prop
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
     setError(null)
 
@@ -30,7 +31,7 @@ export default function AttachmentUploader({ onFilesChange, maxFiles = 5 }: Prop
     // Validar cada archivo
     const validFiles: AttachmentFile[] = []
     for (const file of selectedFiles) {
-      const validation = validateFile(file)
+      const validation = await validateFileUpload(file)
       if (!validation.valid) {
         setError(validation.error || 'Archivo inválido')
         return

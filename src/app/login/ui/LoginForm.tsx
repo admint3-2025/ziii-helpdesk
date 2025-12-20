@@ -1,12 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function LoginForm() {
   const router = useRouter()
-  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,14 +17,28 @@ export default function LoginForm() {
     setError(null)
     setBusy(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setBusy(false)
-    if (error) {
-      setError(error.message)
-      return
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || `Error ${res.status}`)
+        setBusy(false)
+        return
+      }
+
+      // Success - redirect to dashboard
+      router.push('/dashboard')
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? 'Error inesperado')
+      setBusy(false)
     }
-    router.push('/dashboard')
-    router.refresh()
   }
 
   async function onForgot(e: React.FormEvent) {

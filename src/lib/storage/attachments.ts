@@ -2,8 +2,6 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { validateFileUpload } from '@/lib/security/file-validation'
 import { sanitizeFilename } from '@/lib/security/validation'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
 export type UploadResult = {
   success: boolean
   path?: string
@@ -36,7 +34,7 @@ export async function uploadTicketAttachment(
 
   try {
     // Subir archivo a Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('ticket-attachments')
       .upload(fileName, file, {
         cacheControl: '3600',
