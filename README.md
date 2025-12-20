@@ -6,6 +6,23 @@ Help Desk ITIL (tickets, comentarios, auditoría) pensado para correr en la nube
 - Hosting: Vercel (free tier)
 - Auth + DB: Supabase (free tier)
 
+## Características de Seguridad
+
+Esta aplicación implementa múltiples capas de seguridad:
+
+- ✅ Headers de seguridad (CSP, X-Frame-Options, HSTS, etc.)
+- ✅ Rate limiting en endpoints críticos
+- ✅ Política de contraseñas fuertes
+- ✅ Bloqueo de cuenta tras intentos fallidos
+- ✅ Validación de archivos con magic numbers
+- ✅ Sanitización de nombres de archivo
+- ✅ Logging de auditoría para eventos de autenticación
+- ✅ Validación de entrada con Zod
+- ✅ Protección contra SQL injection
+- ✅ Protección contra XSS
+
+Ver [SECURITY.md](SECURITY.md) para más detalles.
+
 ## 1) Requisitos locales
 - Node.js 20+
 
