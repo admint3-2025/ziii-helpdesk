@@ -1,6 +1,8 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { validateFileUpload } from '@/lib/security/file-validation'
 import { sanitizeFilename } from '@/lib/security/validation'
+import { ALLOWED_FILE_EXTENSIONS } from '@/lib/security/constants'
+import { logger } from '@/lib/security/logger'
 
 export type UploadResult = {
   success: boolean
@@ -29,13 +31,12 @@ export async function uploadTicketAttachment(
   const timestamp = Date.now()
   const randomStr = Math.random().toString(36).substring(2, 8)
   
-  // Validate and extract file extension
-  const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt']
+  // Validate and extract file extension using shared constants
   const parts = file.name.split('.')
   const originalExt = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : ''
   
   // Ensure extension is in allowlist
-  const fileExt = allowedExtensions.includes(originalExt) ? originalExt : 'bin'
+  const fileExt = ALLOWED_FILE_EXTENSIONS.includes(originalExt as any) ? originalExt : 'bin'
   
   const sanitizedName = sanitizeFilename(file.name)
   const fileName = `${ticketId}/${timestamp}-${randomStr}.${fileExt}`
@@ -50,7 +51,7 @@ export async function uploadTicketAttachment(
       })
 
     if (uploadError) {
-      console.error('Error uploading file:', uploadError)
+      logger.error('Error uploading file', uploadError)
       return { success: false, error: uploadError.message }
     }
 
@@ -72,7 +73,7 @@ export async function uploadTicketAttachment(
       })
 
     if (dbError) {
-      console.error('Error saving attachment metadata:', dbError)
+      logger.error('Error saving attachment metadata', dbError)
       // Intentar eliminar el archivo subido
       await supabase.storage.from('ticket-attachments').remove([fileName])
       return { success: false, error: 'Error al guardar información del archivo' }
@@ -84,7 +85,7 @@ export async function uploadTicketAttachment(
       publicUrl: urlData.publicUrl,
     }
   } catch (error) {
-    console.error('Unexpected error:', error)
+    logger.error('Unexpected error during file upload', error)
     return { success: false, error: 'Error inesperado al subir archivo' }
   }
 }

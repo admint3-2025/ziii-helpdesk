@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   // Validate with Zod
   const validation = createUserSchema.safeParse(body)
   if (!validation.success) {
-    const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+    const errors = validation.error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
     return new Response(`Validation error: ${errors}`, { status: 400 })
   }
 
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     
     const passwordValidation = passwordSchema.safeParse(validatedData.password)
     if (!passwordValidation.success) {
-      const errors = passwordValidation.error.errors.map(e => e.message).join(', ')
+      const errors = passwordValidation.error.errors.map((e: any) => e.message).join(', ')
       return new Response(errors, { status: 400 })
     }
   }

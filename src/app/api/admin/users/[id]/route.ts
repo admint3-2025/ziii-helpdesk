@@ -28,7 +28,7 @@ export async function PATCH(
   // Validate with Zod
   const validation = updateUserSchema.safeParse(body)
   if (!validation.success) {
-    const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+    const errors = validation.error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
     return new Response(`Validation error: ${errors}`, { status: 400 })
   }
 

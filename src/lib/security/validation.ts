@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_FILENAME_LENGTH, MAX_FILENAME_NAME_LENGTH } from './constants'
 
 // Email validation
 export const emailSchema = z.string().email().trim().toLowerCase()
@@ -89,7 +90,7 @@ export function sanitizeFilename(filename: string): string {
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/\.{2,}/g, '_')
     .replace(/^\.+/, '')
-    .slice(0, 200) // Leave room for extension
+    .slice(0, MAX_FILENAME_NAME_LENGTH) // Leave room for extension
   
   // Check for reserved names
   if (reservedNames.includes(sanitized.toUpperCase())) {
@@ -102,7 +103,7 @@ export function sanitizeFilename(filename: string): string {
   }
   
   // Add back the extension (already sanitized by earlier regex)
-  return (sanitized + ext).slice(0, 255)
+  return (sanitized + ext).slice(0, MAX_FILENAME_LENGTH)
 }
 
 // Validate and sanitize HTML input (for now, just strip it)

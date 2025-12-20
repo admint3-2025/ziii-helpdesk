@@ -1,3 +1,8 @@
+import {
+  MAX_FILE_SIZE,
+  ALLOWED_MIME_TYPES,
+} from './constants'
+
 /**
  * File signature (magic number) validation
  * Validates files by their actual content, not just MIME type
@@ -21,7 +26,6 @@ const FILE_SIGNATURES: Record<string, FileSignature[]> = {
   ],
   'image/webp': [
     { bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 },
-    { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
   ],
   'application/pdf': [
     { bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
@@ -40,6 +44,27 @@ const FILE_SIGNATURES: Record<string, FileSignature[]> = {
   'application/vnd.ms-excel': [
     { bytes: [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] }, // OLE2 signature
   ],
+}
+
+/**
+ * Special validation for WebP (requires both RIFF and WEBP signatures)
+ */
+async function validateWebP(file: File): Promise<boolean> {
+  try {
+    const header = await readFileHeader(file, 12)
+    
+    // Check RIFF at offset 0
+    const hasRiff = header[0] === 0x52 && header[1] === 0x49 && 
+                     header[2] === 0x46 && header[3] === 0x46
+    
+    // Check WEBP at offset 8
+    const hasWebP = header[8] === 0x57 && header[9] === 0x45 && 
+                     header[10] === 0x42 && header[11] === 0x50
+    
+    return hasRiff && hasWebP
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -77,6 +102,11 @@ function matchesSignature(bytes: Uint8Array, signature: FileSignature): boolean 
  */
 export async function validateFileMagicNumber(file: File): Promise<boolean> {
   try {
+    // Special case for WebP (requires both RIFF and WEBP signatures)
+    if (file.type === 'image/webp') {
+      return await validateWebP(file)
+    }
+    
     const signatures = FILE_SIGNATURES[file.type]
     
     if (!signatures) {
@@ -103,7 +133,9 @@ export async function validateFileMagicNumber(file: File): Promise<boolean> {
     
     return false
   } catch (error) {
-    console.error('Error validating file magic number:', error)
+    // Use secure logger to avoid sensitive data leakage
+    const { logger } = await import('@/lib/security/logger')
+    logger.error('Error validating file magic number', error)
     return false
   }
 }
@@ -116,7 +148,6 @@ export async function validateFileUpload(file: File): Promise<{
   error?: string
 }> {
   // Check file size
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
@@ -124,24 +155,10 @@ export async function validateFileUpload(file: File): Promise<{
     }
   }
 
-  // Check MIME type
-  const ALLOWED_TYPES = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-  ]
-
   // Normalize MIME type (some browsers report image/jpg instead of image/jpeg)
   const normalizedType = file.type === 'image/jpg' ? 'image/jpeg' : file.type
 
-  if (!ALLOWED_TYPES.includes(normalizedType)) {
+  if (!ALLOWED_MIME_TYPES.includes(normalizedType as any)) {
     return {
       valid: false,
       error: 'Tipo de archivo no permitido',
