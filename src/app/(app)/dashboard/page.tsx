@@ -102,23 +102,27 @@ export default async function DashboardPage() {
   // Métricas de aging por estado
   const { data: agingData, error: agingError } = await supabase
     .from('tickets')
-    .select('status,created_at')
+    .select('status,created_at,updated_at')
     .is('deleted_at', null)
     .in('status', [...OPEN_STATUSES])
   if (agingError) dashboardErrors.push(agingError.message)
 
+  const now = new Date()
   const agingByStatus = (agingData ?? []).reduce((acc: Record<string, number[]>, t) => {
-    const daysSince = Math.floor((Date.now() - new Date(t.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    const createdDate = new Date(t.created_at)
+    const daysSince = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24))
     if (!acc[t.status]) acc[t.status] = []
     acc[t.status].push(daysSince)
     return acc
   }, {})
 
-  const agingMetrics = Object.entries(agingByStatus).map(([status, days]) => ({
-    status,
-    avgDays: days.reduce((a, b) => a + b, 0) / days.length,
-    oldestDays: Math.max(...days),
-  })).sort((a, b) => b.avgDays - a.avgDays)
+  const agingMetrics = Object.entries(agingByStatus)
+    .map(([status, days]) => ({
+      status,
+      avgDays: days.reduce((a, b) => a + b, 0) / days.length,
+      oldestDays: Math.max(...days),
+    }))
+    .sort((a, b) => b.avgDays - a.avgDays)
 
   return (
     <main className="min-h-screen space-y-6">
