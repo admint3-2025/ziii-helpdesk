@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import SignOutButton from './SignOutButton'
+import Footer from './Footer'
 
 function NavItem({ href, label, icon, badge }: { href: string; label: string; icon: React.ReactNode; badge?: string }) {
   return (
@@ -43,7 +44,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
     : { data: null }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative">
+    <div className="min-h-screen bg-slate-50 relative flex flex-col">
       {/* Patrón de fondo con iconos de helpdesk */}
       <div 
         className="fixed inset-0 -z-10 opacity-[0.04]"
@@ -191,6 +192,8 @@ export default async function AppShell({ children }: { children: React.ReactNode
         </aside>
         <section className="min-w-0">{children}</section>
       </div>
+      
+      <Footer />
     </div>
   )
 }
