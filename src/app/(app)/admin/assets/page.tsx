@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import AssetList from './ui/AssetList'
 import AssetStats from './ui/AssetStats'
 
@@ -54,7 +55,7 @@ export default async function AssetsPage() {
                 <p className="text-violet-100 text-[11px]">Administración de equipos y recursos de TI</p>
               </div>
             </div>
-            <a
+            <Link
               href="/admin/assets/new"
               className="px-3 py-1.5 text-xs font-semibold rounded-md bg-white text-purple-700 hover:bg-purple-50 transition-colors flex items-center gap-1.5"
             >
@@ -62,7 +63,7 @@ export default async function AssetsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Nuevo Activo
-            </a>
+            </Link>
           </div>
         </div>
       </div>
