@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import SignOutButton from './SignOutButton'
 import Footer from './Footer'
+import NotificationBell from './NotificationBell'
 
 function NavItem({ href, label, icon, badge }: { href: string; label: string; icon: React.ReactNode; badge?: string }) {
   return (
@@ -96,6 +97,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
                 </div>
               </div>
             </div>
+            <NotificationBell />
             <SignOutButton />
           </div>
         </div>
