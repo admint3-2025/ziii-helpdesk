@@ -195,6 +195,22 @@ begin
       where ticket_id = new.id
         and user_id = new.requester_id
         and created_at = (select max(created_at) from notifications where ticket_id = new.id and user_id = new.requester_id);
+      
+      -- Notificar a administradores cuando se cierra un ticket
+      if new.status = 'CLOSED' then
+        insert into notifications (user_id, type, title, message, ticket_id, ticket_number)
+        select 
+          p.id,
+          'TICKET_CLOSED'::notification_type,
+          'Ticket cerrado',
+          format('El ticket #%s ha sido cerrado', new.ticket_number),
+          new.id,
+          new.ticket_number
+        from profiles p
+        where p.role = 'admin'
+          and p.id != new.requester_id
+          and p.id != coalesce(new.assigned_agent_id, '00000000-0000-0000-0000-000000000000'::uuid);
+      end if;
     end if;
   end if;
 
