@@ -217,6 +217,7 @@ export default function TicketDetail({
                       <span className="text-gray-500">Creado:</span>
                       <span className="text-gray-900 font-medium">
                         {new Date(ticket.created_at).toLocaleString('es-MX', { 
+                          timeZone: 'America/Mexico_City',
                           day: '2-digit', 
                           month: 'short', 
                           year: 'numeric',
@@ -229,6 +230,7 @@ export default function TicketDetail({
                       <span className="text-gray-500">Actualizado:</span>
                       <span className="text-gray-900 font-medium">
                         {new Date(ticket.updated_at).toLocaleString('es-MX', { 
+                          timeZone: 'America/Mexico_City',
                           day: '2-digit', 
                           month: 'short', 
                           year: 'numeric',
@@ -242,6 +244,7 @@ export default function TicketDetail({
                         <span className="text-gray-500">Cerrado:</span>
                         <span className="text-gray-900 font-medium">
                           {new Date(ticket.closed_at).toLocaleString('es-MX', { 
+                            timeZone: 'America/Mexico_City',
                             day: '2-digit', 
                             month: 'short', 
                             year: 'numeric',
