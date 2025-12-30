@@ -81,17 +81,13 @@ export default function TicketActions({
       return
     }
 
-    // Validar resolución obligatoria al cerrar
-    let resolution: string | null = null
+    // Si es cierre, mostrar modal
     if (nextStatus === 'CLOSED') {
-      resolution = prompt('Resolución del ticket (mínimo 20 caracteres):')
-      if (!resolution || resolution.trim().length < 20) {
-        setError('La resolución es obligatoria y debe tener al menos 20 caracteres.')
-        return
-      }
-      resolution = resolution.trim()
+      setShowCloseModal(true)
+      return
     }
 
+    // Otros cambios de estado
     setBusy(true)
 
     const result = await updateTicketStatus({
@@ -99,7 +95,6 @@ export default function TicketActions({
       currentStatus,
       nextStatus,
       assignedAgentId: nextStatus === 'ASSIGNED' ? assignedAgentId : null,
-      resolution: resolution || undefined,
     })
 
     setBusy(false)
@@ -109,6 +104,28 @@ export default function TicketActions({
       return
     }
     
+    router.refresh()
+  }
+
+  async function handleCloseTicket(resolution: string, attachmentFiles: File[]) {
+    setBusy(true)
+
+    const result = await updateTicketStatus({
+      ticketId,
+      currentStatus,
+      nextStatus: 'CLOSED',
+      resolution,
+      attachments: attachmentFiles,
+    })
+
+    setBusy(false)
+    
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+
+    setShowCloseModal(false)
     router.refresh()
   }
 
