@@ -147,8 +147,8 @@ export default async function AppShell({ children }: { children: React.ReactNode
                     </svg>
                   }
                 />
-                {/* Auditoría solo para administradores */}
-                {profile?.role === 'admin' && (
+                {/* Auditoría para admin y supervisor */}
+                {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
                   <NavItem 
                     href="/audit" 
                     label="Auditoría" 
@@ -162,20 +162,24 @@ export default async function AppShell({ children }: { children: React.ReactNode
               </div>
 
               {/* Sección Administración */}
-              {profile?.role === 'admin' && (
+              {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
                 <div className="space-y-0.5">
                   <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                     Administración
                   </div>
-                  <NavItem 
-                    href="/admin/users" 
-                    label="Usuarios" 
-                    icon={
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    }
-                  />
+                  {/* Usuarios solo para admin */}
+                  {profile?.role === 'admin' && (
+                    <NavItem 
+                      href="/admin/users" 
+                      label="Usuarios" 
+                      icon={
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      }
+                    />
+                  )}
+                  {/* Activos para admin y supervisor */}
                   <NavItem 
                     href="/admin/assets" 
                     label="Activos" 

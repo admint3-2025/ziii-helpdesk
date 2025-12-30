@@ -23,7 +23,7 @@ export default async function AuditPage() {
   const supabase = await createSupabaseServerClient()
   const adminClient = createSupabaseAdminClient()
   
-  // Verificar que el usuario sea administrador
+  // Verificar que el usuario sea admin o supervisor
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   
@@ -33,7 +33,7 @@ export default async function AuditPage() {
     .eq('id', user.id)
     .single()
   
-  if (profile?.role !== 'admin') {
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'supervisor')) {
     redirect('/dashboard')
   }
   
