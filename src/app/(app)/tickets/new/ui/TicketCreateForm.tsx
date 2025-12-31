@@ -84,18 +84,19 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
       if (profile && ['agent_l1', 'agent_l2', 'supervisor', 'admin'].includes(profile.role)) {
         setCanCreateForOthers(true)
         
-        // Load all users - we'll use full_name and id
-        const { data: allUsers } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .order('full_name', { ascending: true, nullsFirst: false })
-        
-        if (allUsers) {
-          setUsers(allUsers.map(u => ({
-            id: u.id,
-            full_name: u.full_name,
-            email: null // We don't have direct access to email from client
-          })))
+        // Load users filtered by location (admin sees all, others see only their location)
+        try {
+          const response = await fetch('/api/tickets/requesters')
+          if (response.ok) {
+            const data = await response.json()
+            setUsers(data.users.map((u: any) => ({
+              id: u.id,
+              full_name: u.full_name,
+              email: u.email
+            })))
+          }
+        } catch (err) {
+          console.error('Error cargando usuarios:', err)
         }
       }
 

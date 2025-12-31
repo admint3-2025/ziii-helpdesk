@@ -52,21 +52,34 @@ export default function TicketActions({
 
   useEffect(() => {
     async function loadAgents() {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id,full_name')
-        .in('role', ['agent_l1', 'agent_l2', 'supervisor', 'admin'])
-      if (data) {
-        setAgents(data.map((p) => ({ id: p.id, full_name: p.full_name, email: null })))
+      // Cargar agentes L1, L2, supervisores y admin (filtrados por ubicación)
+      try {
+        const response = await fetch('/api/tickets/agents?level=all')
+        if (response.ok) {
+          const data = await response.json()
+          setAgents(data.agents.map((p: any) => ({ 
+            id: p.id, 
+            full_name: p.full_name, 
+            email: p.email 
+          })))
+        }
+      } catch (err) {
+        console.error('Error cargando agentes:', err)
       }
 
-      // Cargar solo agentes L2, supervisores y admins para escalamiento
-      const { data: l2Data } = await supabase
-        .from('profiles')
-        .select('id,full_name')
-        .in('role', ['agent_l2', 'supervisor', 'admin'])
-      if (l2Data) {
-        setAgentsL2(l2Data.map((p) => ({ id: p.id, full_name: p.full_name, email: null })))
+      // Cargar solo agentes L2, supervisores y admins para escalamiento (filtrados por ubicación)
+      try {
+        const response = await fetch('/api/tickets/agents?level=l2')
+        if (response.ok) {
+          const data = await response.json()
+          setAgentsL2(data.agents.map((p: any) => ({ 
+            id: p.id, 
+            full_name: p.full_name, 
+            email: p.email 
+          })))
+        }
+      } catch (err) {
+        console.error('Error cargando agentes L2:', err)
       }
     }
     loadAgents()
