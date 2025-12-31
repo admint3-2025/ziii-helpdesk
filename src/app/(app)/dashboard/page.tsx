@@ -102,26 +102,32 @@ export default async function DashboardPage() {
   // Métricas de aging por estado
   const { data: agingData, error: agingError } = await supabase
     .from('tickets')
-    .select('status,created_at,updated_at')
+    .select('status,created_at,updated_at,ticket_number')
     .is('deleted_at', null)
     .in('status', [...OPEN_STATUSES])
   if (agingError) dashboardErrors.push(agingError.message)
 
   const now = new Date()
-  const agingByStatus = (agingData ?? []).reduce((acc: Record<string, number[]>, t) => {
+  const agingByStatus = (agingData ?? []).reduce((acc: Record<string, { days: number; ticketNumber: number }[]>, t) => {
     const createdDate = new Date(t.created_at)
     const daysSince = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24))
     if (!acc[t.status]) acc[t.status] = []
-    acc[t.status].push(daysSince)
+    acc[t.status].push({ days: daysSince, ticketNumber: t.ticket_number })
     return acc
   }, {})
 
   const agingMetrics = Object.entries(agingByStatus)
-    .map(([status, days]) => ({
-      status,
-      avgDays: days.reduce((a, b) => a + b, 0) / days.length,
-      oldestDays: Math.max(...days),
-    }))
+    .map(([status, items]) => {
+      const days = items.map(i => i.days)
+      const oldest = items.reduce((max, item) => item.days > max.days ? item : max, items[0])
+      return {
+        status,
+        avgDays: days.reduce((a, b) => a + b, 0) / days.length,
+        oldestDays: Math.max(...days),
+        count: items.length,
+        oldestTicketNumber: oldest.ticketNumber
+      }
+    })
     .sort((a, b) => b.avgDays - a.avgDays)
 
   return (

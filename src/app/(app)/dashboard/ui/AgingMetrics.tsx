@@ -1,7 +1,14 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+
 type AgingMetric = {
   status: string
   avgDays: number
   oldestDays: number
+  count?: number
+  oldestTicketNumber?: number
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -14,6 +21,8 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function AgingMetrics({ metrics }: { metrics: AgingMetric[] }) {
+  const [hoveredStatus, setHoveredStatus] = useState<string | null>(null)
+
   return (
     <div className="card shadow-lg border-0">
       <div className="card-body">
@@ -40,28 +49,53 @@ export default function AgingMetrics({ metrics }: { metrics: AgingMetric[] }) {
             </div>
           ) : (
             metrics.map((metric) => (
-              <div
+              <Link
                 key={metric.status}
-                className="group flex items-center justify-between p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 hover:shadow-md transition-all"
+                href={`/tickets?status=${metric.status}`}
+                className="group relative block"
+                onMouseEnter={() => setHoveredStatus(metric.status)}
+                onMouseLeave={() => setHoveredStatus(null)}
               >
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-gray-900">
-                    {STATUS_LABELS[metric.status] || metric.status}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer">
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold text-gray-900">
+                      {STATUS_LABELS[metric.status] || metric.status}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+                      </svg>
+                      <span>Más antiguo: <span className="font-medium">{metric.oldestDays}d</span></span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
-                    </svg>
-                    <span>Más antiguo: <span className="font-medium">{metric.oldestDays}d</span></span>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold bg-gradient-to-br from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                      {metric.avgDays.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-500 font-medium">días</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold bg-gradient-to-br from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                    {metric.avgDays.toFixed(1)}
+
+                {/* Tooltip al hover */}
+                {hoveredStatus === metric.status && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 p-3 bg-gray-900 text-white rounded-lg shadow-xl text-xs animate-fadeIn">
+                    <div className="font-semibold mb-1">
+                      {STATUS_LABELS[metric.status] || metric.status}
+                    </div>
+                    <div className="space-y-1 text-gray-300">
+                      {metric.count && <div>📊 Total: {metric.count} ticket{metric.count !== 1 ? 's' : ''}</div>}
+                      <div>📈 Promedio: {metric.avgDays.toFixed(1)} días</div>
+                      <div>⏰ Más antiguo: {metric.oldestDays} días</div>
+                      {metric.oldestTicketNumber && (
+                        <div>🎫 Ticket #{metric.oldestTicketNumber}</div>
+                      )}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-700 text-amber-400">
+                      👆 Clic para ver tickets filtrados
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 font-medium">días</div>
-                </div>
-              </div>
+                )}
+              </Link>
             ))
           )}
         </div>

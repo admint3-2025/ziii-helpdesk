@@ -1,0 +1,55 @@
+-- ============================================================================
+-- LIMPIEZA COMPLETA DE DATOS DE DEMOSTRACIÓN
+-- Preserva: usuarios, categorías, estructura de BD
+-- Elimina: tickets, assets, comentarios, historial, auditoría, notificaciones
+-- ============================================================================
+
+-- 1. Desactivar temporalmente RLS para limpieza
+SET session_replication_role = replica;
+
+-- 2. Eliminar datos de tickets y relacionados
+DELETE FROM ticket_comments;
+DELETE FROM ticket_status_history;
+DELETE FROM tickets;
+
+-- 3. Eliminar assets (si existe)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'assets') THEN
+        DELETE FROM assets;
+    END IF;
+END $$;
+
+-- 4. Eliminar adjuntos y limpiar bucket de storage
+DELETE FROM ticket_attachments;
+DELETE FROM storage.objects WHERE bucket_id = 'ticket-attachments';
+
+-- 5. Eliminar notificaciones (si existe)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications') THEN
+        DELETE FROM notifications;
+    END IF;
+END $$;
+
+-- 6. Eliminar auditoría
+DELETE FROM audit_log;
+
+-- 7. Reiniciar secuencia de ticket_number
+ALTER SEQUENCE ticket_number_seq RESTART WITH 1;
+
+-- 8. Reactivar RLS
+SET session_replication_role = DEFAULT;
+
+-- 9. Verificar limpieza
+SELECT 
+  'tickets' as tabla, COUNT(*) as registros FROM tickets
+UNION ALL SELECT 'comments', COUNT(*) FROM ticket_comments
+UNION ALL SELECT 'historial', COUNT(*) FROM ticket_status_history
+UNION ALL SELECT 'adjuntos', COUNT(*) FROM ticket_attachments
+UNION ALL SELECT 'archivos_storage', COUNT(*) FROM storage.objects WHERE bucket_id = 'ticket-attachments'
+UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log
+UNION ALL SELECT 'usuarios', COUNT(*) FROM profiles
+UNION ALL SELECT 'categorías', COUNT(*) FROM categories;
+
+-- Resultado esperado: 0 en tickets/comments/historial/adjuntos/archivos/audit, >0 en usuarios/categorías
