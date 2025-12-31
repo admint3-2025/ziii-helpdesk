@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   )
   if (statusError) dashboardErrors.push(statusError.message)
 
-  const statusCounts = (statusData ?? []).reduce((acc: Record<string, number>, t) => {
+  const statusCounts = (statusData ?? []).reduce((acc: Record<string, number>, t: { status: string }) => {
     acc[t.status] = (acc[t.status] || 0) + 1
     return acc
   }, {})
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
   )
   if (priorityError) dashboardErrors.push(priorityError.message)
 
-  const priorityCounts = (priorityData ?? []).reduce((acc: Record<number, number>, t) => {
+  const priorityCounts = (priorityData ?? []).reduce((acc: Record<number, number>, t: { priority: number }) => {
     acc[t.priority] = (acc[t.priority] || 0) + 1
     return acc
   }, {})
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
   if (trendError) dashboardErrors.push(trendError.message)
 
   const trendCounts = last7Days.map((date) => {
-    const count = (trendData ?? []).filter((t) =>
+    const count = (trendData ?? []).filter((t: { created_at: string }) =>
       t.created_at.startsWith(date)
     ).length
     return { date, count }
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
   if (agingError) dashboardErrors.push(agingError.message)
 
   const now = new Date()
-  const agingByStatus = (agingData ?? []).reduce((acc: Record<string, { days: number; ticketNumber: number }[]>, t) => {
+  const agingByStatus = (agingData ?? []).reduce((acc: Record<string, { days: number; ticketNumber: number }[]>, t: { status: string; created_at: string; ticket_number: number }) => {
     const createdDate = new Date(t.created_at)
     const daysSince = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24))
     if (!acc[t.status]) acc[t.status] = []
@@ -138,9 +138,9 @@ export default async function DashboardPage() {
     return acc
   }, {})
 
-  const agingMetrics = Object.entries(agingByStatus)
+  const agingMetrics = (Object.entries(agingByStatus) as [string, { days: number; ticketNumber: number }[]][])
     .map(([status, items]) => {
-      const days = items.map(i => i.days)
+      const days = items.map((i) => i.days)
       const oldest = items.reduce((max, item) => item.days > max.days ? item : max, items[0])
       return {
         status,
