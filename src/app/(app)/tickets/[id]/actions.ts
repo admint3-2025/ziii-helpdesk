@@ -484,6 +484,14 @@ export async function requestEscalation(ticketId: string, reason: string) {
     return { error: 'No se encontró ningún supervisor en tu sede' }
   }
 
+  // Registrar comentario en el ticket (auditoría)
+  await supabase.from('ticket_comments').insert({
+    ticket_id: ticketId,
+    author_id: user.id,
+    content: `🔔 **Solicitud de escalamiento a Nivel 2**\n\n**Motivo:** ${reason}\n\n*El técnico ${profile.full_name || 'L1'} ha solicitado la aprobación del supervisor para escalar este ticket a Nivel 2.*`,
+    is_internal: false, // Visible para todos para trazabilidad
+  })
+
   // Enviar notificación a cada supervisor de la sede
   try {
     const { createSupabaseAdminClient } = await import('@/lib/supabase/admin')
@@ -499,10 +507,10 @@ export async function requestEscalation(ticketId: string, reason: string) {
       
       if (!authUser.user?.email) continue
 
-      // Crear notificación en la base de datos
+      // Crear notificación push en la base de datos
       await supabase.from('notifications').insert({
         user_id: supervisor.id,
-        type: 'escalation_request',
+        type: 'TICKET_ESCALATED', // Usar tipo válido del enum
         title: `🔔 Solicitud de escalamiento en ${locationCode}`,
         message: `${profile.full_name || 'Un técnico'} solicita escalar el ticket #${ticket.ticket_number}: "${ticket.title}". Motivo: ${reason}`,
         ticket_id: ticketId,
