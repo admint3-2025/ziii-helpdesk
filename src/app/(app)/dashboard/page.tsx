@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLocationFilter } from '@/lib/supabase/locations'
 import { unstable_noStore as noStore } from 'next/cache'
 import StatusChart from './ui/StatusChart'
 import PriorityChart from './ui/PriorityChart'
@@ -17,13 +18,24 @@ export default async function DashboardPage() {
 
   const dashboardErrors: string[] = []
 
+  // Obtener filtro de ubicación (null si es admin, location_id si no lo es)
+  const locationFilter = await getLocationFilter()
+
+  // Helper para aplicar filtro de ubicación
+  const applyFilter = (query: any) => {
+    if (locationFilter) {
+      return query.eq('location_id', locationFilter)
+    }
+    return query
+  }
+
   // KPIs principales
   const [openRes, closedRes, escalatedRes, assignedRes, totalRes] = await Promise.all([
-    supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).in('status', [...OPEN_STATUSES]),
-    supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).in('status', ['CLOSED']),
-    supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('support_level', 2),
-    supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).not('assigned_agent_id', 'is', null),
-    supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+    applyFilter(supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).in('status', [...OPEN_STATUSES])),
+    applyFilter(supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).in('status', ['CLOSED'])),
+    applyFilter(supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('support_level', 2)),
+    applyFilter(supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null).not('assigned_agent_id', 'is', null)),
+    applyFilter(supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null)),
   ])
 
   ;[openRes, closedRes, escalatedRes, assignedRes, totalRes].forEach((r) => {
@@ -37,10 +49,12 @@ export default async function DashboardPage() {
   const total = totalRes.count ?? 0
 
   // Distribución por estado
-  const { data: statusData, error: statusError } = await supabase
-    .from('tickets')
-    .select('status')
-    .is('deleted_at', null)
+  const { data: statusData, error: statusError } = await applyFilter(
+    supabase
+      .from('tickets')
+      .select('status')
+      .is('deleted_at', null)
+  )
   if (statusError) dashboardErrors.push(statusError.message)
 
   const statusCounts = (statusData ?? []).reduce((acc: Record<string, number>, t) => {
@@ -54,10 +68,12 @@ export default async function DashboardPage() {
   }))
 
   // Distribución por prioridad
-  const { data: priorityData, error: priorityError } = await supabase
-    .from('tickets')
-    .select('priority')
-    .is('deleted_at', null)
+  const { data: priorityData, error: priorityError } = await applyFilter(
+    supabase
+      .from('tickets')
+      .select('priority')
+      .is('deleted_at', null)
+  )
   if (priorityError) dashboardErrors.push(priorityError.message)
 
   const priorityCounts = (priorityData ?? []).reduce((acc: Record<number, number>, t) => {
@@ -77,10 +93,12 @@ export default async function DashboardPage() {
     return date.toISOString().split('T')[0]
   })
 
-  const { data: trendData, error: trendError } = await supabase
-    .from('tickets')
-    .select('created_at')
-    .gte('created_at', last7Days[0])
+  const { data: trendData, error: trendError } = await applyFilter(
+    supabase
+      .from('tickets')
+      .select('created_at')
+      .gte('created_at', last7Days[0])
+  )
   if (trendError) dashboardErrors.push(trendError.message)
 
   const trendCounts = last7Days.map((date) => {
@@ -91,20 +109,24 @@ export default async function DashboardPage() {
   })
 
   // Tickets recientes
-  const { data: recentTickets, error: recentError } = await supabase
-    .from('tickets')
-    .select('id,ticket_number,title,status,priority,created_at')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(5)
+  const { data: recentTickets, error: recentError } = await applyFilter(
+    supabase
+      .from('tickets')
+      .select('id,ticket_number,title,status,priority,created_at')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(5)
+  )
   if (recentError) dashboardErrors.push(recentError.message)
 
   // Métricas de aging por estado
-  const { data: agingData, error: agingError } = await supabase
-    .from('tickets')
-    .select('status,created_at,updated_at,ticket_number')
-    .is('deleted_at', null)
-    .in('status', [...OPEN_STATUSES])
+  const { data: agingData, error: agingError } = await applyFilter(
+    supabase
+      .from('tickets')
+      .select('status,created_at,updated_at,ticket_number')
+      .is('deleted_at', null)
+      .in('status', [...OPEN_STATUSES])
+  )
   if (agingError) dashboardErrors.push(agingError.message)
 
   const now = new Date()

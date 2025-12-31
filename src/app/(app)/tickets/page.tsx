@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLocationFilter } from '@/lib/supabase/locations'
 import { getCategoryPathLabel } from '@/lib/categories/path'
 import { StatusBadge, PriorityBadge, LevelBadge } from '@/lib/ui/badges'
 import TicketFilters from './ui/TicketFilters'
@@ -12,11 +13,19 @@ export default async function TicketsPage({
   const supabase = await createSupabaseServerClient()
   const params = await searchParams
   
+  // Obtener filtro de ubicación
+  const locationFilter = await getLocationFilter()
+  
   // Construir query base
   let query = supabase
     .from('tickets')
     .select('id,ticket_number,title,status,priority,support_level,created_at,category_id,description')
     .is('deleted_at', null)
+
+  // Aplicar filtro de ubicación
+  if (locationFilter) {
+    query = query.eq('location_id', locationFilter)
+  }
 
   // Aplicar filtros
   if (params.search) {

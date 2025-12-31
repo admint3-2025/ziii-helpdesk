@@ -81,6 +81,11 @@ export async function PATCH(
     updates.position = position || null
   }
 
+  if (body?.location_id !== undefined) {
+    const locationId = typeof body.location_id === 'string' ? body.location_id.trim() : ''
+    updates.location_id = locationId || null
+  }
+
   if (Object.keys(updates).length > 0) {
     const { error } = await admin.from('profiles').update(updates).eq('id', id)
     if (error) return new Response(error.message, { status: 400 })
@@ -107,6 +112,7 @@ export async function PATCH(
         building: body?.building,
         floor: body?.floor,
         position: body?.position,
+        location_id: body?.location_id,
         active: body?.active,
       },
     },

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getLocationFilter } from '@/lib/supabase/locations'
 import { redirect } from 'next/navigation'
 
 // Mapeos para traducir términos técnicos
@@ -29,17 +30,41 @@ export default async function AuditPage() {
   
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, location_id')
     .eq('id', user.id)
     .single()
   
   if (!profile || (profile.role !== 'admin' && profile.role !== 'supervisor')) {
     redirect('/dashboard')
   }
+
+  // Obtener filtro de ubicación
+  const locationFilter = await getLocationFilter()
   
-  const { data: audit } = await supabase
+  // Construir query base
+  let auditQuery = supabase
     .from('audit_log')
     .select('id,action,entity_type,entity_id,actor_id,metadata,created_at')
+
+  // Para auditoría de tickets, filtrar por ubicación si no es admin
+  // Obtenemos los IDs de tickets de la ubicación del usuario
+  if (locationFilter) {
+    const { data: locationTickets } = await supabase
+      .from('tickets')
+      .select('id')
+      .eq('location_id', locationFilter)
+    
+    const ticketIds = locationTickets?.map(t => t.id) ?? []
+    
+    // Filtrar auditoría: solo tickets de la ubicación o acciones no relacionadas con tickets
+    if (ticketIds.length > 0) {
+      auditQuery = auditQuery.or(`entity_type.neq.ticket,entity_id.in.(${ticketIds.join(',')})`)
+    } else {
+      auditQuery = auditQuery.neq('entity_type', 'ticket')
+    }
+  }
+
+  const { data: audit } = await auditQuery
     .order('created_at', { ascending: false })
     .limit(200)
 

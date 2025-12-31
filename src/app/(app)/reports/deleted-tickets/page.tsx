@@ -1,11 +1,15 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLocationFilter } from '@/lib/supabase/locations'
 import { StatusBadge, PriorityBadge } from '@/lib/ui/badges'
 
 export default async function DeletedTicketsReportPage() {
   const supabase = await createSupabaseServerClient()
 
-  // Obtener tickets eliminados con información completa
-  const { data: deletedTickets } = await supabase
+  // Obtener filtro de ubicación
+  const locationFilter = await getLocationFilter()
+
+  // Construir query base
+  let query = supabase
     .from('tickets')
     .select(`
       id,
@@ -21,6 +25,14 @@ export default async function DeletedTicketsReportPage() {
       deleted_reason
     `)
     .not('deleted_at', 'is', null)
+
+  // Aplicar filtro de ubicación
+  if (locationFilter) {
+    query = query.eq('location_id', locationFilter)
+  }
+
+  // Obtener tickets eliminados con información completa
+  const { data: deletedTickets } = await query
     .order('deleted_at', { ascending: false })
     .limit(100)
 

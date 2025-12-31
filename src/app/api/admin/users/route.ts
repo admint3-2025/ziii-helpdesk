@@ -39,10 +39,17 @@ export async function GET() {
 
   const { data: profiles, error: profErr } = await admin
     .from('profiles')
-    .select('id,full_name,role,department,phone,building,floor,position,supervisor_id')
+    .select('id,full_name,role,department,phone,building,floor,position,supervisor_id,location_id,locations(name)')
     .in('id', ids)
 
   if (profErr) return new Response(profErr.message, { status: 500 })
+
+  // Cargar todas las ubicaciones activas
+  const { data: locations } = await admin
+    .from('locations')
+    .select('id,name,code')
+    .eq('is_active', true)
+    .order('name')
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
 
@@ -62,10 +69,12 @@ export async function GET() {
       floor: (p?.floor as any) ?? null,
       position: (p?.position as any) ?? null,
       supervisor_id: (p?.supervisor_id as any) ?? null,
+      location_id: (p?.location_id as any) ?? null,
+      location_name: (p?.locations as any)?.name ?? null,
     }
   })
 
-  return Response.json({ users })
+  return Response.json({ users, locations: locations ?? [] })
 }
 
 export async function POST(request: Request) {
@@ -94,6 +103,7 @@ export async function POST(request: Request) {
   const building = typeof body?.building === 'string' ? body.building.trim() : ''
   const floor = typeof body?.floor === 'string' ? body.floor.trim() : ''
   const position = typeof body?.position === 'string' ? body.position.trim() : ''
+  const locationId = typeof body?.location_id === 'string' ? body.location_id.trim() : ''
   const invite = body?.invite !== false
   const password = typeof body?.password === 'string' ? body.password : null
 
@@ -137,6 +147,7 @@ export async function POST(request: Request) {
     building: building || null,
     floor: floor || null,
     position: position || null,
+    location_id: locationId || null,
   })
 
   if (upsertErr) {
@@ -153,6 +164,7 @@ export async function POST(request: Request) {
       email,
       role,
       department,
+      location_id: locationId || null,
       invite,
     },
   })

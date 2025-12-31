@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 
 type Role = 'requester' | 'agent_l1' | 'agent_l2' | 'supervisor' | 'auditor' | 'admin'
 
+type Location = {
+  id: string
+  name: string
+  code: string
+}
+
 type UserRow = {
   id: string
   email: string | null
@@ -18,6 +24,8 @@ type UserRow = {
   floor: string | null
   position: string | null
   supervisor_id: string | null
+  location_id: string | null
+  location_name: string | null
 }
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -39,6 +47,7 @@ export default function UserList() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<UserRow[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState<Role>('requester')
@@ -47,6 +56,7 @@ export default function UserList() {
   const [editPosition, setEditPosition] = useState('')
   const [editBuilding, setEditBuilding] = useState('')
   const [editFloor, setEditFloor] = useState('')
+  const [editLocationId, setEditLocationId] = useState<string>('')
 
   const sorted = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -66,8 +76,9 @@ export default function UserList() {
         setError(text || `Error ${res.status}`)
         return
       }
-      const json = JSON.parse(text) as { users: UserRow[] }
+      const json = JSON.parse(text) as { users: UserRow[]; locations: Location[] }
       setUsers(json.users)
+      setLocations(json.locations || [])
     } catch (e: any) {
       setError(e?.message ?? 'Error inesperado')
     } finally {
@@ -88,6 +99,7 @@ export default function UserList() {
     setEditPosition(u.position ?? '')
     setEditBuilding(u.building ?? '')
     setEditFloor(u.floor ?? '')
+    setEditLocationId(u.location_id ?? '')
   }
 
   async function saveEdit(userId: string) {
@@ -105,6 +117,7 @@ export default function UserList() {
           position: editPosition.trim(),
           building: editBuilding.trim(),
           floor: editFloor.trim(),
+          location_id: editLocationId || null,
         }),
       })
       const text = await res.text()
@@ -239,7 +252,7 @@ export default function UserList() {
             <tr>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Email</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Nombre</th>
-              <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Sede</th>
+              <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Ciudad/Empresa</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Rol</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Estado</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Acciones</th>
@@ -265,16 +278,23 @@ export default function UserList() {
 
                   <td className="px-3 py-2">
                     {editing ? (
-                      <div className="space-y-1">
-                        <input className="input text-xs" value={editBuilding} onChange={(e) => setEditBuilding(e.target.value)} placeholder="Edificio" />
-                        <input className="input text-xs" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder="Piso" />
-                        <input className="input text-xs" value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)} placeholder="Departamento" />
-                        <input className="input text-xs" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Teléfono" />
-                        <input className="input text-xs" value={editPosition} onChange={(e) => setEditPosition(e.target.value)} placeholder="Puesto" />
-                      </div>
+                      <select className="select text-xs" value={editLocationId} onChange={(e) => setEditLocationId(e.target.value)}>
+                        <option value="">Sin asignar</option>
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.name} ({loc.code})
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <div className="text-gray-900 text-xs">
-                        {u.building || u.floor ? `${u.building || ''} ${u.floor ? 'P' + u.floor : ''}`.trim() : '—'}
+                        {u.location_name ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-medium">
+                            {u.location_name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Sin asignar</span>
+                        )}
                       </div>
                     )}
                   </td>

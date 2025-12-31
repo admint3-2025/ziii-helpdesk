@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const ROLES = [
   { value: 'requester', label: 'Usuario' },
@@ -12,6 +12,12 @@ const ROLES = [
 ] as const
 
 type Role = (typeof ROLES)[number]['value']
+
+type Location = {
+  id: string
+  name: string
+  code: string
+}
 
 type Result = {
   id: string
@@ -29,11 +35,28 @@ export default function UserCreateForm() {
   const [building, setBuilding] = useState('')
   const [floor, setFloor] = useState('')
   const [position, setPosition] = useState('')
+  const [locationId, setLocationId] = useState<string>('')
+  const [locations, setLocations] = useState<Location[]>([])
   const [invite, setInvite] = useState(true)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Result | null>(null)
+
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/admin/users')
+        if (res.ok) {
+          const data = await res.json()
+          setLocations(data.locations || [])
+        }
+      } catch {
+        // Silent fail, locations will remain empty
+      }
+    }
+    loadLocations()
+  }, [])
 
   async function submit() {
     setError(null)
@@ -63,6 +86,7 @@ export default function UserCreateForm() {
           building: building.trim(),
           floor: floor.trim(),
           position: position.trim(),
+          location_id: locationId || null,
           invite,
           ...(invite ? {} : { password }),
         }),
@@ -84,6 +108,7 @@ export default function UserCreateForm() {
       setBuilding('')
       setFloor('')
       setPosition('')
+      setLocationId('')
       setInvite(true)
       setPassword('')
     } catch (e: any) {
@@ -187,6 +212,18 @@ export default function UserCreateForm() {
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-gray-700">Ciudad/Empresa</label>
+            <select className="select mt-1" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+              <option value="">Sin asignar</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name} ({loc.code})
                 </option>
               ))}
             </select>

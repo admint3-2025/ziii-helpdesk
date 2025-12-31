@@ -41,7 +41,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   } = await supabase.auth.getUser()
 
   const { data: profile } = user
-    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    ? await supabase.from('profiles').select('role,location_id,locations(name,code)').eq('id', user.id).single()
     : { data: null }
 
   return (
@@ -84,13 +84,25 @@ export default async function AppShell({ children }: { children: React.ReactNode
                 <div className="text-sm font-semibold text-white">
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario'}
                 </div>
-                <div className="text-xs text-blue-100 flex items-center gap-1.5">
+                <div className="text-xs text-blue-100 flex items-center gap-1.5 flex-wrap">
                   <span>{user?.email}</span>
                   {profile?.role && (
                     <>
                       <span className="text-white/50">•</span>
                       <span className="px-1.5 py-0.5 bg-blue-500/30 rounded text-[10px] font-medium uppercase">
                         {profile.role === 'admin' ? 'Admin' : profile.role === 'agent_l1' ? 'Agente L1' : profile.role === 'agent_l2' ? 'Agente L2' : profile.role === 'supervisor' ? 'Supervisor' : 'Usuario'}
+                      </span>
+                    </>
+                  )}
+                  {(profile as any)?.locations?.name && (
+                    <>
+                      <span className="text-white/50">•</span>
+                      <span className="px-1.5 py-0.5 bg-emerald-500/30 rounded text-[10px] font-medium flex items-center gap-1">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {(profile as any).locations.code}
                       </span>
                     </>
                   )}
@@ -169,15 +181,27 @@ export default async function AppShell({ children }: { children: React.ReactNode
                   </div>
                   {/* Usuarios solo para admin */}
                   {profile?.role === 'admin' && (
-                    <NavItem 
-                      href="/admin/users" 
-                      label="Usuarios" 
-                      icon={
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                      }
-                    />
+                    <>
+                      <NavItem 
+                        href="/admin/users" 
+                        label="Usuarios" 
+                        icon={
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                        }
+                      />
+                      <NavItem 
+                        href="/admin/locations" 
+                        label="Ubicaciones" 
+                        icon={
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        }
+                      />
+                    </>
                   )}
                   {/* Activos para admin y supervisor */}
                   <NavItem 

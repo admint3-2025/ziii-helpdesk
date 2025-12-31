@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLocationFilter } from '@/lib/supabase/locations'
 import { StatusBadge, PriorityBadge, LevelBadge } from '@/lib/ui/badges'
 import { getCategoryPathLabel } from '@/lib/categories/path'
 import Link from 'next/link'
@@ -6,8 +7,11 @@ import Link from 'next/link'
 export default async function AllTicketsReportPage() {
   const supabase = await createSupabaseServerClient()
 
-  // Obtener todos los tickets activos
-  const { data: tickets } = await supabase
+  // Obtener filtro de ubicación
+  const locationFilter = await getLocationFilter()
+
+  // Construir query base
+  let query = supabase
     .from('tickets')
     .select(`
       id,
@@ -24,7 +28,14 @@ export default async function AllTicketsReportPage() {
       updated_at
     `)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+
+  // Aplicar filtro de ubicación
+  if (locationFilter) {
+    query = query.eq('location_id', locationFilter)
+  }
+
+  // Obtener todos los tickets activos
+  const { data: tickets } = await query.order('created_at', { ascending: false })
 
   // Obtener categorías para breadcrumbs
   const { data: categories } = await supabase
