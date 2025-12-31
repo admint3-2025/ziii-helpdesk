@@ -491,8 +491,8 @@ export async function requestEscalation(ticketId: string, reason: string) {
     const { error: commentError } = await supabase.from('ticket_comments').insert({
       ticket_id: ticketId,
       author_id: user.id,
-      content: `🔔 **Solicitud de escalamiento a Nivel 2**\n\n**Motivo:** ${reason}\n\n*El técnico ${profile.full_name || 'L1'} ha solicitado la aprobación del supervisor para escalar este ticket a Nivel 2.*`,
-      is_internal: false, // Visible para todos para trazabilidad
+      body: `🔔 **Solicitud de escalamiento a Nivel 2**\n\n**Motivo:** ${reason}\n\n*El técnico ${profile.full_name || 'L1'} ha solicitado la aprobación del supervisor para escalar este ticket a Nivel 2.*`,
+      visibility: 'public', // Visible para todos para trazabilidad
     })
 
     if (commentError) {
@@ -689,8 +689,8 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
       .from('ticket_comments')
       .select(`
         id,
-        content,
-        is_internal,
+        body,
+        visibility,
         created_at,
         profiles:author_id (full_name)
       `)
@@ -705,7 +705,7 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
     // Preparar comentarios para el template
     const formattedComments = (comments || []).map((c: any) => ({
       author: c.profiles?.full_name || 'Usuario',
-      content: c.content,
+      content: c.body,
       date: new Date(c.created_at).toLocaleString('es-MX', {
         year: 'numeric',
         month: 'long',
@@ -713,7 +713,7 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      isInternal: c.is_internal,
+      isInternal: c.visibility === 'internal',
     }))
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -766,8 +766,8 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
     await supabase.from('ticket_comments').insert({
       ticket_id: input.ticketId,
       author_id: user.id,
-      content: `📧 Información del ticket enviada por correo a: ${input.recipientEmail} (${input.recipientName})${input.reason ? `\nMotivo: ${input.reason}` : ''}`,
-      is_internal: true,
+      body: `📧 Información del ticket enviada por correo a: ${input.recipientEmail} (${input.recipientName})${input.reason ? `\nMotivo: ${input.reason}` : ''}`,
+      visibility: 'internal',
     })
 
     return { success: true, message: `Correo enviado exitosamente a ${input.recipientEmail}` }

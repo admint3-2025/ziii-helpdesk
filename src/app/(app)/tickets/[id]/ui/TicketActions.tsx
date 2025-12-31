@@ -179,19 +179,28 @@ export default function TicketActions({
       return
     }
     
+    console.log('[CLIENT] Llamando requestEscalation con reason:', reason.trim())
     setBusy(true)
     
-    const result = await requestEscalation(ticketId, reason.trim())
-    
-    setBusy(false)
-    
-    if (result.error) {
-      setError(result.error)
-      return
+    try {
+      const result = await requestEscalation(ticketId, reason.trim())
+      
+      console.log('[CLIENT] Resultado de requestEscalation:', result)
+      setBusy(false)
+      
+      if (result.error) {
+        console.error('[CLIENT] Error recibido:', result.error)
+        setError(result.error)
+        return
+      }
+      
+      alert('✓ Solicitud enviada al supervisor de tu sede')
+      router.refresh()
+    } catch (err) {
+      console.error('[CLIENT] Exception en handleRequestEscalation:', err)
+      setBusy(false)
+      setError('Error inesperado: ' + (err as Error).message)
     }
-    
-    alert('✓ Solicitud enviada al supervisor de tu sede')
-    router.refresh()
   }
 
   async function handleSendTicketEmail() {
