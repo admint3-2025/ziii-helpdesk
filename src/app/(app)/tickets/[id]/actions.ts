@@ -249,13 +249,16 @@ export async function escalateTicket(ticketId: string, currentLevel: number, ass
   // Obtener datos del ticket para notificaciones
   const { data: ticket } = await supabase
     .from('tickets')
-    .select('id, ticket_number, title, priority, requester_id')
+    .select('id, ticket_number, title, priority, requester_id, assigned_agent_id, locations(name, code)')
     .eq('id', ticketId)
     .single()
 
   if (!ticket) {
     return { error: 'Ticket no encontrado' }
   }
+
+  // Obtener información del agente anterior (puede ser el técnico L1 que solicitó)
+  const previousAgentId = ticket.assigned_agent_id
 
   const { error } = await supabase
     .from('tickets')
@@ -268,6 +271,144 @@ export async function escalateTicket(ticketId: string, currentLevel: number, ass
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Obtener perfil del supervisor que escaló
+  const { data: supervisorProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
+  // Obtener perfil del nuevo agente asignado
+  const { data: newAgentProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', assignToAgentId)
+    .single()
+
+  // Agregar comentario de escalamiento aprobado
+  const locationCode = (ticket.locations as any)?.code || ''
+  const locationName = (ticket.locations as any)?.name || ''
+  await supabase.from('ticket_comments').insert({
+    ticket_id: ticketId,
+    author_id: user.id,
+    body: `✅ **Escalamiento aprobado a Nivel 2**\n\n**Escalado por:** ${supervisorProfile?.full_name || 'Supervisor'}\n**Asignado a:** ${newAgentProfile?.full_name || 'Técnico L2'}\n**Sede:** ${locationCode} - ${locationName}\n\n_El ticket ha sido escalado exitosamente._`,
+    visibility: 'public',
+  })
+
+  // Notificar al técnico L1 anterior si existe
+  if (previousAgentId) {
+    try {
+      const { createSupabaseAdminClient } = await import('@/lib/supabase/admin')
+      const adminClient = createSupabaseAdminClient()
+      
+      // Obtener email del técnico L1
+      const { data: authUser } = await adminClient.auth.admin.getUserById(previousAgentId)
+      
+      if (authUser.user?.email) {
+        // Crear notificación push
+        await supabase.from('notifications').insert({
+          user_id: previousAgentId,
+          type: 'TICKET_ESCALATED',
+          title: `✅ Escalamiento aprobado - Ticket #${ticket.ticket_number}`,
+          message: `${supervisorProfile?.full_name || 'El supervisor'} ha aprobado tu solicitud de escalamiento. El ticket ha sido escalado a Nivel 2 y asignado a ${newAgentProfile?.full_name || 'un técnico L2'}.`,
+          ticket_id: ticketId,
+          ticket_number: ticket.ticket_number,
+          actor_id: user.id,
+        })
+
+        // Enviar email
+        const { sendMail } = await import('@/lib/email/mailer')
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const ticketUrl = `${baseUrl}/tickets/${ticketId}`
+
+        const html = `
+          <!DOCTYPE html>
+          <html lang="es">
+          <head><meta charset="UTF-8"></head>
+          <body style="margin:0; padding:0; background-color:#f9fafb;">
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f9fafb; padding:40px 20px;">
+              
+              <div style="max-width:600px; margin:0 auto 24px auto; text-align:center;">
+                <img src="https://integrational3.com.mx/logorigen/ZIII%20logo.png" alt="ZIII Helpdesk" width="180" height="120" style="display:block; margin:0 auto;" />
+              </div>
+
+              <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; box-shadow:0 4px 6px rgba(0,0,0,0.07); overflow:hidden;">
+                
+                <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:24px;">
+                  <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:12px; text-align:center; border:1px solid rgba(255,255,255,0.2);">
+                    <div style="font-size:36px; margin-bottom:6px;">✅</div>
+                    <h2 style="margin:0; font-size:20px; font-weight:700; color:#ffffff;">Escalamiento Aprobado</h2>
+                  </div>
+                </div>
+
+                <div style="padding:32px;">
+                  <p style="margin:0 0 24px 0; font-size:15px; color:#374151;">
+                    Hola,
+                  </p>
+                  <p style="margin:0 0 24px 0; font-size:15px; color:#374151;">
+                    <strong>${supervisorProfile?.full_name || 'El supervisor'}</strong> ha aprobado tu solicitud de escalamiento.
+                  </p>
+
+                  <div style="margin-bottom:24px; text-align:center;">
+                    <div style="display:inline-block; padding:8px 20px; background:#d1fae5; border:2px solid #10b981; border-radius:20px;">
+                      <span style="font-size:12px; color:#065f46; font-weight:700;">📍 ${locationCode} - ${locationName}</span>
+                    </div>
+                  </div>
+
+                  <div style="padding:20px; background:#d1fae5; border-radius:12px; margin-bottom:24px; border:2px solid #10b981;">
+                    <div style="font-size:12px; color:#065f46; font-weight:700; margin-bottom:8px;">TICKET ESCALADO</div>
+                    <div style="font-size:32px; color:#059669; font-weight:800;">#${ticket.ticket_number}</div>
+                  </div>
+
+                  <div style="margin-bottom:24px;">
+                    <div style="padding-bottom:16px; border-bottom:1px solid #e5e7eb;">
+                      <div style="font-size:11px; color:#6b7280; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Título</div>
+                      <div style="font-size:16px; color:#111827; font-weight:600;">${ticket.title}</div>
+                    </div>
+                  </div>
+
+                  <div style="padding:16px; background:#d1fae5; border-radius:10px; border:1px solid #10b981; margin-bottom:24px;">
+                    <div style="font-size:11px; color:#065f46; text-transform:uppercase; font-weight:700; margin-bottom:8px;">Asignado a</div>
+                    <div style="font-size:14px; color:#047857; line-height:1.6;">${newAgentProfile?.full_name || 'Técnico Nivel 2'}</div>
+                  </div>
+
+                  <div style="text-align:center; margin:32px 0 24px 0;">
+                    <a href="${ticketUrl}" style="display:inline-block; background:#10b981; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600;">
+                      Ver Ticket →
+                    </a>
+                  </div>
+
+                  <div style="padding:16px; background:#d1fae5; border-left:4px solid #10b981; border-radius:8px;">
+                    <p style="margin:0; font-size:13px; color:#065f46;">
+                      <strong>✅ Escalamiento completado:</strong> El ticket ha sido escalado exitosamente a Nivel 2.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style="max-width:600px; margin:24px auto 0 auto; text-align:center;">
+                <p style="margin:0 0 8px 0; font-size:12px; color:#9ca3af;">ZIII Helpdesk · Mesa de Ayuda ITIL</p>
+                <p style="margin:0; font-size:11px; color:#d1d5db;">Este es un mensaje automático, no respondas</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+
+        await sendMail({
+          to: authUser.user.email,
+          subject: `✅ Escalamiento aprobado - Ticket #${ticket.ticket_number} [${locationCode}]`,
+          html,
+          text: `Escalamiento aprobado\n\n${supervisorProfile?.full_name || 'El supervisor'} ha aprobado tu solicitud de escalamiento para el ticket #${ticket.ticket_number}.\n\nEl ticket ha sido escalado a Nivel 2 y asignado a ${newAgentProfile?.full_name || 'un técnico L2'}.\n\nVer ticket: ${ticketUrl}`,
+        })
+
+        console.log(`[escalateTicket] Notificación enviada al técnico L1: ${authUser.user.email}`)
+      }
+    } catch (err) {
+      console.error('[escalateTicket] Error notificando al técnico L1:', err)
+    }
   }
 
   // Enviar notificaciones de escalamiento
