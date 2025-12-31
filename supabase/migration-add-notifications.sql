@@ -59,28 +59,36 @@ begin
 end;
 $$;
 
--- Función: Notificar creación de ticket a supervisores/admins
+-- Función: Notificar creación de ticket a personal de la misma sede
 create or replace function notify_ticket_created()
 returns trigger
 language plpgsql
 security definer
 as $$
 declare
-  supervisor_id uuid;
-  admin_id uuid;
+  staff_id uuid;
   requester_name text;
 begin
   -- Obtener nombre del solicitante
   requester_name := get_user_name(new.requester_id);
 
-  -- Notificar a supervisores y admins
-  for admin_id in
-    select id from profiles where role in ('supervisor', 'admin')
+  -- Notificar a supervisores, técnicos L1/L2 de la misma sede + admins (sin sede específica)
+  for staff_id in
+    select id 
+    from profiles 
+    where role in ('supervisor', 'agent_l1', 'agent_l2', 'admin')
+      and (
+        -- Personal de la misma sede
+        (location_id = new.location_id and new.location_id is not null)
+        -- O admins sin sede asignada (ven todos)
+        or (role = 'admin' and location_id is null)
+      )
   loop
-    if admin_id != new.requester_id then
+    -- No notificar al creador del ticket
+    if staff_id != new.requester_id then
       insert into notifications (user_id, type, title, message, ticket_id, ticket_number, actor_id)
       values (
-        admin_id,
+        staff_id,
         'TICKET_CREATED',
         'Nuevo ticket creado',
         format('"%s" ha creado el ticket #%s', requester_name, new.ticket_number),
@@ -148,6 +156,7 @@ security definer
 as $$
 declare
   status_label text;
+  staff_id uuid;
 begin
   -- Solo si hay cambio de estado
   if new.status != old.status then
@@ -196,20 +205,31 @@ begin
         and user_id = new.requester_id
         and created_at = (select max(created_at) from notifications where ticket_id = new.id and user_id = new.requester_id);
       
-      -- Notificar a administradores cuando se cierra un ticket
+      -- Notificar a personal de la sede cuando se cierra un ticket
       if new.status = 'CLOSED' then
-        insert into notifications (user_id, type, title, message, ticket_id, ticket_number)
-        select 
-          p.id,
-          'TICKET_CLOSED'::notification_type,
-          'Ticket cerrado',
-          format('El ticket #%s ha sido cerrado', new.ticket_number),
-          new.id,
-          new.ticket_number
-        from profiles p
-        where p.role = 'admin'
-          and p.id != new.requester_id
-          and p.id != coalesce(new.assigned_agent_id, '00000000-0000-0000-0000-000000000000'::uuid);
+        for staff_id in
+          select id 
+          from profiles 
+          where role in ('supervisor', 'agent_l1', 'agent_l2', 'admin')
+            and (
+              -- Personal de la misma sede
+              (location_id = new.location_id and new.location_id is not null)
+              -- O admins sin sede asignada (ven todos)
+              or (role = 'admin' and location_id is null)
+            )
+            and id != new.requester_id
+            and id != coalesce(new.assigned_agent_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        loop
+          insert into notifications (user_id, type, title, message, ticket_id, ticket_number)
+          values (
+            staff_id,
+            'TICKET_CLOSED'::notification_type,
+            'Ticket cerrado',
+            format('El ticket #%s ha sido cerrado', new.ticket_number),
+            new.id,
+            new.ticket_number
+          );
+        end loop;
       end if;
     end if;
   end if;
