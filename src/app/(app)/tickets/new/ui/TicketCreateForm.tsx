@@ -7,6 +7,7 @@ import { computePriority } from '@/lib/tickets/priority'
 import { createTicket } from '../actions'
 import AttachmentUploader from '@/components/AttachmentUploader'
 import { uploadTicketAttachment } from '@/lib/storage/attachments'
+import ConfirmTicketModal from './ConfirmTicketModal'
 
 type CategoryRow = {
   id: string
@@ -58,11 +59,14 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
   const [assets, setAssets] = useState<Asset[]>([])
   const [assetId, setAssetId] = useState<string>('')
   
-  // Modal states
+  // Modal states (category creation)
   const [showModal, setShowModal] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryLevel, setNewCategoryLevel] = useState<1 | 2 | 3>(1)
   const [creatingCategory, setCreatingCategory] = useState(false)
+  
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const priority = useMemo(() => computePriority({ impact, urgency }), [impact, urgency])
 
@@ -189,6 +193,12 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    
+    // Mostrar modal de confirmación en lugar de crear directamente
+    setShowConfirmModal(true)
+  }
+
+  async function handleConfirmCreate() {
     setBusy(true)
 
     const result = await createTicket({
@@ -232,9 +242,57 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
     setBusy(false)
     
     if (result.success && result.ticketId) {
+      setShowConfirmModal(false)
       router.push(`/tickets/${result.ticketId}`)
       router.refresh()
     }
+  }
+
+  // Función para obtener el nombre completo de la categoría
+  function getCategoryFullName(): string {
+    const parts: string[] = []
+    
+    if (categoryL1) {
+      const cat1 = categories.find(c => c.id === categoryL1)
+      if (cat1) parts.push(cat1.name)
+    }
+    
+    if (categoryL2) {
+      const cat2 = categories.find(c => c.id === categoryL2)
+      if (cat2) parts.push(cat2.name)
+    }
+    
+    if (categoryL3) {
+      const cat3 = categories.find(c => c.id === categoryL3)
+      if (cat3) parts.push(cat3.name)
+    }
+    
+    return parts.join(' > ') || 'Sin categoría'
+  }
+
+  // Función para obtener el nombre del solicitante
+  function getRequesterName(): string {
+    if (canCreateForOthers && requesterId && requesterId !== currentUserId) {
+      const user = users.find(u => u.id === requesterId)
+      return user?.full_name || 'Usuario desconocido'
+    }
+    return 'Tú (solicitante actual)'
+  }
+
+  // Función para obtener info del activo
+  function getAssetInfo(): string | null {
+    if (!assetId) return null
+    const asset = assets.find(a => a.id === assetId)
+    if (!asset) return null
+    
+    const parts = [
+      asset.asset_tag,
+      asset.asset_type,
+      asset.brand,
+      asset.model
+    ].filter(Boolean)
+    
+    return parts.join(' - ')
   }
 
   async function createNewCategory() {
@@ -765,6 +823,25 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
           </div>
         </div>
       )}
+
+      {/* Modal de confirmación de ticket */}
+      <ConfirmTicketModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmCreate}
+        busy={busy}
+        ticketData={{
+          title,
+          description,
+          categoryName: getCategoryFullName(),
+          impact,
+          urgency,
+          priority,
+          requesterName: getRequesterName(),
+          assetInfo: getAssetInfo(),
+          attachmentsCount: attachments.length
+        }}
+      />
     </>
   )
 }
