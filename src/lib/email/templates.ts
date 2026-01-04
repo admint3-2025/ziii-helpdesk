@@ -1,3 +1,255 @@
+export function passwordResetRequestEmailTemplate(params: {
+  appName: string
+  requestingUserName: string
+  requestingUserEmail: string
+  adminPanelUrl: string
+}) {
+  const { appName, requestingUserName, requestingUserEmail, adminPanelUrl } = params
+
+  const subject = `${appName} — Solicitud de restablecimiento de contraseña`
+
+  const text = [
+    `Solicitud de restablecimiento de contraseña`,
+    ``,
+    `Usuario: ${requestingUserName} (${requestingUserEmail})`,
+    ``,
+    `Ha solicitado restablecer su contraseña. Por favor, genera una contraseña temporal desde el panel de administración:`,
+    adminPanelUrl,
+    ``,
+    `Tiempo máximo de respuesta: 2 horas`,
+  ].join('\n')
+
+  const html = `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0; padding:0; background-color:#f9fafb;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background:#f9fafb; padding:40px 20px;">
+      <!-- Logo / Header -->
+      <div style="max-width:600px; margin:0 auto 24px auto; text-align:center;">
+        <img src="https://integrational3.com.mx/logorigen/ZIII%20logo.png" alt="ZIII Helpdesk" width="180" height="120" style="display:block; margin:0 auto; height:120px; width:auto; max-width:100%;" />
+      </div>
+
+      <!-- Main Card -->
+      <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; box-shadow:0 4px 6px rgba(0,0,0,0.07); overflow:hidden;">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg, #dc2626 0%, #f59e0b 100%); padding:24px 24px 16px 24px;">
+          <div style="background:rgba(255,255,255,0.15); backdrop-filter:blur(10px); border-radius:12px; padding:12px; text-align:center; border:1px solid rgba(255,255,255,0.2);">
+            <div style="font-size:36px; margin-bottom:6px;">🔔</div>
+            <h2 style="margin:0; font-size:20px; font-weight:700; color:#ffffff;">Solicitud de restablecimiento</h2>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:32px;">
+          <p style="margin:0 0 24px 0; font-size:15px; color:#374151; line-height:1.6;">
+            Un usuario ha solicitado restablecer su contraseña en <strong style="color:#111827;">${escapeHtml(appName)}</strong>.
+          </p>
+
+          <!-- User Info Box -->
+          <div style="margin:24px 0; padding:20px; background:#fef3c7; border-radius:12px; border-l-4 border-amber-500;">
+            <div style="margin-bottom:12px;">
+              <p style="margin:0 0 4px 0; font-size:12px; color:#92400e; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+                Usuario solicitante
+              </p>
+              <p style="margin:0; font-size:16px; color:#111827; font-weight:700;">
+                ${escapeHtml(requestingUserName)}
+              </p>
+            </div>
+            <div>
+              <p style="margin:0 0 4px 0; font-size:12px; color:#92400e; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+                Email
+              </p>
+              <p style="margin:0; font-size:14px; color:#111827; font-family:'Courier New', monospace;">
+                ${escapeHtml(requestingUserEmail)}
+              </p>
+            </div>
+          </div>
+
+          <!-- Action Required -->
+          <div style="margin:24px 0; padding:16px; background:#dbeafe; border-left:4px solid #3b82f6; border-radius:8px;">
+            <p style="margin:0 0 8px 0; font-size:13px; color:#1e3a8a; font-weight:700;">
+              ⏰ ACCIÓN REQUERIDA
+            </p>
+            <p style="margin:0; font-size:13px; color:#1e40af; line-height:1.5;">
+              Por favor, genera una contraseña temporal para este usuario desde el panel de administración en un máximo de 2 horas.
+            </p>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align:center; margin:32px 0;">
+            <a href="${escapeAttr(adminPanelUrl)}"
+               style="display:inline-block; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(79, 70, 229, 0.3); transition:transform 0.2s;">
+              Ir al Panel de Administración
+            </a>
+          </div>
+
+          <!-- Instructions -->
+          <div style="margin-top:24px; padding:14px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+            <p style="margin:0 0 8px 0; font-size:13px; color:#374151; font-weight:600;">
+              Pasos para generar contraseña temporal:
+            </p>
+            <ol style="margin:0; padding-left:20px; font-size:13px; color:#6b7280; line-height:1.8;">
+              <li>Accede al panel de administración</li>
+              <li>Ve a la sección "Usuarios"</li>
+              <li>Busca al usuario: ${escapeHtml(requestingUserEmail)}</li>
+              <li>Haz clic en "Editar" y luego en "Enviar reset password"</li>
+              <li>La contraseña temporal se generará y enviará automáticamente</li>
+            </ol>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="max-width:600px; margin:24px auto 0 auto; text-align:center;">
+        <p style="margin:0 0 8px 0; font-size:12px; color:#9ca3af;">
+          Este correo fue enviado automáticamente por <strong>ZIII Helpdesk</strong>
+        </p>
+        <p style="margin:0; font-size:11px; color:#d1d5db;">
+          No respondas a este mensaje · Sistema de Mesa de Ayuda ITIL
+        </p>
+      </div>
+    </div>
+  </body>
+  </html>
+  `
+
+  return { subject, html, text }
+}
+
+export function temporaryPasswordEmailTemplate(params: {
+  appName: string
+  userName: string
+  userEmail: string
+  temporaryPassword: string
+  loginUrl: string
+}) {
+  const { appName, userName, userEmail, temporaryPassword, loginUrl } = params
+
+  const subject = `${appName} — Contraseña temporal generada`
+
+  const text = [
+    `Contraseña temporal para ${appName}`,
+    ``,
+    `Hola ${userName},`,
+    ``,
+    `Se ha generado una contraseña temporal para tu cuenta.`,
+    ``,
+    `Email: ${userEmail}`,
+    `Contraseña temporal: ${temporaryPassword}`,
+    ``,
+    `Inicia sesión en: ${loginUrl}`,
+    ``,
+    `IMPORTANTE: Por seguridad, te recomendamos encarecidamente cambiar esta contraseña temporal después de iniciar sesión. No dejes la contraseña que se te asignó de forma automática.`,
+    ``,
+    `Si no solicitaste este cambio, contacta al administrador del sistema inmediatamente.`,
+  ].join('\n')
+
+  const html = `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0; padding:0; background-color:#f9fafb;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background:#f9fafb; padding:40px 20px;">
+      <!-- Logo / Header -->
+      <div style="max-width:600px; margin:0 auto 24px auto; text-align:center;">
+        <img src="https://integrational3.com.mx/logorigen/ZIII%20logo.png" alt="ZIII Helpdesk" width="180" height="120" style="display:block; margin:0 auto; height:120px; width:auto; max-width:100%;" />
+      </div>
+
+      <!-- Main Card -->
+      <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; box-shadow:0 4px 6px rgba(0,0,0,0.07); overflow:hidden;">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg, #1e40af 0%, #4f46e5 100%); padding:24px 24px 16px 24px;">
+          <div style="background:rgba(255,255,255,0.15); backdrop-filter:blur(10px); border-radius:12px; padding:12px; text-align:center; border:1px solid rgba(255,255,255,0.2);">
+            <div style="font-size:36px; margin-bottom:6px;">🔐</div>
+            <h2 style="margin:0; font-size:20px; font-weight:700; color:#ffffff;">Contraseña temporal</h2>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:32px;">
+          <p style="margin:0 0 24px 0; font-size:15px; color:#374151; line-height:1.6;">
+            Hola <strong style="color:#111827;">${escapeHtml(userName)}</strong>,
+          </p>
+
+          <p style="margin:0 0 24px 0; font-size:15px; color:#374151; line-height:1.6;">
+            Se ha generado una contraseña temporal para tu cuenta en <strong style="color:#111827;">${escapeHtml(appName)}</strong>.
+          </p>
+
+          <!-- Credentials Box -->
+          <div style="margin:24px 0; padding:20px; background:#f9fafb; border-radius:12px; border:2px solid #e5e7eb;">
+            <div style="margin-bottom:16px;">
+              <p style="margin:0 0 6px 0; font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+                Email
+              </p>
+              <p style="margin:0; font-size:14px; color:#111827; font-family:'Courier New', monospace; background:#ffffff; padding:10px; border-radius:6px; border:1px solid #e5e7eb;">
+                ${escapeHtml(userEmail)}
+              </p>
+            </div>
+            <div>
+              <p style="margin:0 0 6px 0; font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+                Contraseña temporal
+              </p>
+              <p style="margin:0; font-size:16px; color:#111827; font-family:'Courier New', monospace; background:#ffffff; padding:12px; border-radius:6px; border:1px solid #e5e7eb; font-weight:700; letter-spacing:1px; text-align:center;">
+                ${escapeHtml(temporaryPassword)}
+              </p>
+            </div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align:center; margin:32px 0;">
+            <a href="${escapeAttr(loginUrl)}"
+               style="display:inline-block; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(79, 70, 229, 0.3); transition:transform 0.2s;">
+              Iniciar sesión
+            </a>
+          </div>
+
+          <!-- Important Notice -->
+          <div style="margin-top:24px; padding:16px; background:#fef3c7; border-left:4px solid #f59e0b; border-radius:8px;">
+            <p style="margin:0 0 8px 0; font-size:13px; color:#92400e; font-weight:700;">
+              ⚠️ IMPORTANTE - ACCIÓN RECOMENDADA
+            </p>
+            <p style="margin:0; font-size:13px; color:#92400e; line-height:1.5;">
+              Por seguridad, te recomendamos encarecidamente que cambies esta contraseña temporal después de iniciar sesión. No dejes la contraseña que se te asignó de forma automática. Elige una contraseña segura que solo tú conozcas.
+            </p>
+          </div>
+
+          <!-- Security Notice -->
+          <div style="margin-top:16px; padding:14px; background:#fef2f2; border-left:4px solid #ef4444; border-radius:8px;">
+            <p style="margin:0; font-size:13px; color:#991b1b; line-height:1.5;">
+              <strong>🔒 Nota de seguridad:</strong> Si no solicitaste este cambio, contacta al administrador del sistema inmediatamente. Tu cuenta podría estar en riesgo.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="max-width:600px; margin:24px auto 0 auto; text-align:center;">
+        <p style="margin:0 0 8px 0; font-size:12px; color:#9ca3af;">
+          Este correo fue enviado automáticamente por <strong>ZIII Helpdesk</strong>
+        </p>
+        <p style="margin:0; font-size:11px; color:#d1d5db;">
+          No respondas a este mensaje · Sistema de Mesa de Ayuda ITIL
+        </p>
+      </div>
+    </div>
+  </body>
+  </html>
+  `
+
+  return { subject, html, text }
+}
+
 export function passwordRecoveryEmailTemplate(params: {
   appName: string
   actionUrl: string
@@ -107,12 +359,30 @@ export function ticketCreatedEmailTemplate(params: {
   category: string
   ticketUrl: string
   requesterName: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, description, priority, category, ticketUrl, requesterName } = params
+  const {
+    ticketNumber,
+    title,
+    description,
+    priority,
+    category,
+    ticketUrl,
+    requesterName,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `Ticket #${ticketNumber} creado exitosamente`
 
-  const text = [
+  const textLines: string[] = [
     `Nuevo ticket creado`,
     ``,
     `Ticket: #${ticketNumber}`,
@@ -120,13 +390,29 @@ export function ticketCreatedEmailTemplate(params: {
     `Título: ${title}`,
     `Categoría: ${category}`,
     `Prioridad: ${priority}`,
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Descripción:`,
     description,
     ``,
     `Ver ticket completo:`,
     ticketUrl,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -192,6 +478,22 @@ export function ticketCreatedEmailTemplate(params: {
               </div>
             </div>
 
+            ${assetTag ? `
+            <!-- Asset Info -->
+            <div style="margin-bottom:16px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+              <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">💻</span>
+                <span>Activo reportado</span>
+              </div>
+              <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+                <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+                ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+                ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+                ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+              </div>
+            </div>
+            ` : ''}
+
             <!-- Description -->
             <div style="padding:16px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb;">
               <div style="font-size:11px; color:#6b7280; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px;">Descripción</div>
@@ -241,24 +543,57 @@ export function ticketAssignedToRequesterEmailTemplate(params: {
   assignedAgentName: string
   ticketUrl: string
   requesterName: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, priority, assignedAgentName, ticketUrl, requesterName } = params
+  const {
+    ticketNumber,
+    title,
+    priority,
+    assignedAgentName,
+    ticketUrl,
+    requesterName,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `✅ Tu ticket #${ticketNumber} ha sido asignado`
 
-  const text = [
+  const textLines: string[] = [
     `Actualización de tu ticket`,
     ``,
     `Ticket: #${ticketNumber}`,
     `Título: ${title}`,
     `Prioridad: ${priority}`,
     `Asignado a: ${assignedAgentName}`,
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Tu ticket está siendo atendido por nuestro equipo de soporte.`,
     ``,
     `Ver ticket:`,
     ticketUrl,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -315,6 +650,21 @@ export function ticketAssignedToRequesterEmailTemplate(params: {
             </div>
           </div>
 
+            ${assetTag ? `
+            <div style="margin-bottom:16px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+              <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">💻</span>
+                <span>Activo reportado</span>
+              </div>
+              <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+                <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+                ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+                ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+                ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+              </div>
+            </div>
+            ` : ''}
+
           <div style="text-align:center; margin:32px 0 24px 0;">
             <a href="${escapeAttr(ticketUrl)}"
                style="display:inline-block; background:linear-gradient(135deg, #10b981 0%, #34d399 100%); color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(16, 185, 129, 0.3);">
@@ -353,22 +703,55 @@ export function ticketAssignedEmailTemplate(params: {
   assignedTo: string
   assignedBy: string
   ticketUrl: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, priority, assignedTo, assignedBy, ticketUrl } = params
+  const {
+    ticketNumber,
+    title,
+    priority,
+    assignedTo,
+    assignedBy,
+    ticketUrl,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `🎯 Ticket #${ticketNumber} asignado a ti`
 
-  const text = [
+  const textLines: string[] = [
     `Ticket asignado`,
     ``,
     `Se te ha asignado el ticket #${ticketNumber}`,
     `Título: ${title}`,
     `Prioridad: ${priority}`,
     `Asignado por: ${assignedBy}`,
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Ver ticket:`,
     ticketUrl,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -425,6 +808,21 @@ export function ticketAssignedEmailTemplate(params: {
             </div>
           </div>
 
+            ${assetTag ? `
+            <div style="margin-bottom:16px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+              <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">💻</span>
+                <span>Activo reportado</span>
+              </div>
+              <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+                <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+                ${assetType ? `<div style=\"margin-top:2px;\">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+                ${(assetBrand || assetModel) ? `<div style=\"margin-top:2px;\">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+                ${assetSerial ? `<div style=\"margin-top:2px;\">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+              </div>
+            </div>
+            ` : ''}
+
           <div style="text-align:center; margin:32px 0 24px 0;">
             <a href="${escapeAttr(ticketUrl)}"
                style="display:inline-block; background:linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(8, 145, 178, 0.3);">
@@ -465,12 +863,31 @@ export function ticketStatusChangedEmailTemplate(params: {
   ticketUrl: string
   recipientName: string
   resolution?: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, oldStatus, newStatus, changedBy, ticketUrl, recipientName, resolution } = params
+  const {
+    ticketNumber,
+    title,
+    oldStatus,
+    newStatus,
+    changedBy,
+    ticketUrl,
+    recipientName,
+    resolution,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `🔄 Actualización Ticket #${ticketNumber}`
 
-  const text = [
+  const textLines: string[] = [
     `Estado del ticket actualizado`,
     ``,
     `Ticket: #${ticketNumber}`,
@@ -478,10 +895,26 @@ export function ticketStatusChangedEmailTemplate(params: {
     `Estado anterior: ${oldStatus}`,
     `Nuevo estado: ${newStatus}`,
     `Actualizado por: ${changedBy}`,
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Ver ticket:`,
     ticketUrl,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -550,6 +983,20 @@ export function ticketStatusChangedEmailTemplate(params: {
               <div style="font-size:14px; color:#111827; font-weight:500;">${escapeHtml(changedBy)}</div>
             </div>
           </div>
+            ${assetTag ? `
+            <div style="margin-bottom:24px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+              <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">💻</span>
+                <span>Activo reportado</span>
+              </div>
+              <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+                <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+                ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+                ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+                ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+              </div>
+            </div>
+            ` : ''}
           ${resolution ? `
           <div style="margin-bottom:24px; padding:20px; background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius:12px; border:2px solid #86efac;">
             <div style="font-size:11px; color:#16a34a; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
@@ -597,23 +1044,56 @@ export function ticketClosedEmailTemplate(params: {
   ticketUrl: string
   recipientName: string
   resolution?: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, closedBy, ticketUrl, recipientName, resolution } = params
+  const {
+    ticketNumber,
+    title,
+    closedBy,
+    ticketUrl,
+    recipientName,
+    resolution,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `✅ Ticket #${ticketNumber} cerrado`
 
-  const text = [
+  const textLines: string[] = [
     `Ticket cerrado`,
     ``,
     `Tu ticket #${ticketNumber} ha sido cerrado.`,
     `Título: ${title}`,
     `Cerrado por: ${closedBy}`,
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Gracias por usar nuestro sistema de soporte.`,
     ``,
     `Ver ticket:`,
     ticketUrl,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -664,6 +1144,21 @@ export function ticketClosedEmailTemplate(params: {
             </div>
           </div>
 
+          ${assetTag ? `
+          <div style="margin-bottom:24px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+            <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span style="font-size:16px;">💻</span>
+              <span>Activo reportado</span>
+            </div>
+            <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+              <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+              ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+              ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+              ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
+
           ${resolution ? `
           <div style="margin-bottom:24px; padding:20px; background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius:12px; border:2px solid #86efac;">
             <div style="font-size:11px; color:#16a34a; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
@@ -713,12 +1208,30 @@ export function ticketEscalatedEmailTemplate(params: {
   specialistName: string
   ticketUrl: string
   isSpecialist: boolean
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, priority, escalatedBy, specialistName, ticketUrl, isSpecialist } = params
+  const {
+    ticketNumber,
+    title,
+    priority,
+    escalatedBy,
+    specialistName,
+    ticketUrl,
+    isSpecialist,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `🔺 Ticket #${ticketNumber} escalado a Nivel 2 — ZIII Helpdesk`
 
-  const text = [
+  const textLines: string[] = [
     `Ticket #${ticketNumber} escalado a Nivel 2`,
     ``,
     `Título: ${title}`,
@@ -729,9 +1242,25 @@ export function ticketEscalatedEmailTemplate(params: {
     isSpecialist
       ? 'Has sido asignado como especialista de nivel 2 para este ticket.'
       : 'Tu ticket ha sido escalado a un especialista de nivel 2 para una atención más especializada.',
+  ]
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     ``,
     `Ver detalles: ${ticketUrl}`,
-  ].join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -817,6 +1346,21 @@ export function ticketEscalatedEmailTemplate(params: {
             </div>
           </div>
 
+          ${assetTag ? `
+          <div style="margin-bottom:24px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+            <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span style="font-size:16px;">💻</span>
+              <span>Activo reportado</span>
+            </div>
+            <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+              <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+              ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+              ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+              ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
+
           <div style="text-align:center; margin:32px 0 24px 0;">
             <a href="${escapeAttr(ticketUrl)}"
                style="display:inline-block; background:linear-gradient(135deg, #ea580c 0%, #f97316 100%); color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(234, 88, 12, 0.3);">
@@ -870,18 +1414,59 @@ export function ticketLocationStaffNotificationTemplate(params: {
   isUpdate: boolean
   oldStatus?: string
   newStatus?: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
-  const { ticketNumber, title, description, priority, category, locationName, locationCode, actorName, staffName, ticketUrl, isUpdate, oldStatus, newStatus } = params
+  const {
+    ticketNumber,
+    title,
+    description,
+    priority,
+    category,
+    locationName,
+    locationCode,
+    actorName,
+    staffName,
+    ticketUrl,
+    isUpdate,
+    oldStatus,
+    newStatus,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
+  } = params
 
   const subject = `[${locationCode}] ${isUpdate ? 'Actualización' : 'Nuevo'} Ticket #${ticketNumber}`
 
-  const text = [
+  const textLines: string[] = [
     `${isUpdate ? 'Actualización de' : 'Nuevo'} ticket en tu sede`,
     ``,
     `Sede: ${locationName} (${locationCode})`,
     `Ticket: #${ticketNumber}`,
     `Título: ${title}`,
-    description ? `Descripción: ${description}` : '',
+  ]
+
+  if (description) {
+    textLines.push(`Descripción: ${description}`)
+  }
+
+  if (assetTag) {
+    textLines.push(
+      ``,
+      `ACTIVO REPORTADO`,
+      `Etiqueta: ${assetTag}`,
+      assetType ? `Tipo: ${assetType}` : '',
+      assetBrand || assetModel ? `Marca/Modelo: ${[assetBrand, assetModel].filter(Boolean).join(' ')}` : '',
+      assetSerial ? `Serie: ${assetSerial}` : '',
+    )
+  }
+
+  textLines.push(
     `Prioridad: ${priority}`,
     category ? `Categoría: ${category}` : '',
     isUpdate && oldStatus && newStatus ? `Estado: ${oldStatus} → ${newStatus}` : '',
@@ -891,7 +1476,9 @@ export function ticketLocationStaffNotificationTemplate(params: {
     ticketUrl,
     ``,
     `Recibes esta notificación porque eres personal técnico/supervisor de la sede ${locationName}.`,
-  ].filter(Boolean).join('\n')
+  )
+
+  const text = textLines.filter(Boolean).join('\n')
 
   const html = `
   <!DOCTYPE html>
@@ -973,6 +1560,22 @@ export function ticketLocationStaffNotificationTemplate(params: {
                 <div style="display:inline-block; padding:4px 12px; background:#fef2f2; color:#dc2626; font-size:13px; font-weight:700; border-radius:6px;">${escapeHtml(priority)}</div>
               </div>
             </div>
+
+            ${assetTag ? `
+            <!-- Asset Info -->
+            <div style="margin-bottom:16px; padding:16px; background:#ecfeff; border-radius:10px; border:1px solid #bae6fd;">
+              <div style="font-size:11px; color:#0369a1; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">💻</span>
+                <span>Activo reportado</span>
+              </div>
+              <div style="font-size:14px; color:#0f172a; line-height:1.5;">
+                <div style="font-weight:600;">Etiqueta: ${escapeHtml(assetTag)}</div>
+                ${assetType ? `<div style="margin-top:2px;">Tipo: ${escapeHtml(assetType)}</div>` : ''}
+                ${(assetBrand || assetModel) ? `<div style="margin-top:2px;">Marca/Modelo: ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}</div>` : ''}
+                ${assetSerial ? `<div style="margin-top:2px;">Serie: ${escapeHtml(assetSerial)}</div>` : ''}
+              </div>
+            </div>
+            ` : ''}
 
             ${isUpdate && oldStatus && newStatus ? `
             <!-- Status Change -->
@@ -1057,6 +1660,11 @@ export function ticketInvestigationEmailTemplate(params: {
   ticketUrl: string
   senderName: string
   reason?: string
+  assetTag?: string
+  assetType?: string
+  assetBrand?: string
+  assetModel?: string
+  assetSerial?: string
 }) {
   const {
     recipientName,
@@ -1083,6 +1691,11 @@ export function ticketInvestigationEmailTemplate(params: {
     ticketUrl,
     senderName,
     reason,
+    assetTag,
+    assetType,
+    assetBrand,
+    assetModel,
+    assetSerial,
   } = params
 
   const subject = `[INFORME] Ticket #${ticketNumber} - ${title}`
@@ -1099,6 +1712,7 @@ export function ticketInvestigationEmailTemplate(params: {
     `Prioridad: ${priority}`,
     `Categoría: ${category}`,
     `Sede: ${locationName} (${locationCode})`,
+    assetTag ? `Activo: ${assetTag} ${assetBrand || ''} ${assetModel || ''}`.trim() : '',
     ``,
     `Solicitante: ${requesterName}`,
     `Asignado a: ${assignedAgentName || 'Sin asignar'}`,
@@ -1216,6 +1830,16 @@ export function ticketInvestigationEmailTemplate(params: {
                   <strong>${escapeHtml(locationName)}</strong> (${escapeHtml(locationCode)})
                 </td>
               </tr>
+              ${assetTag ? `
+              <tr>
+                <td style="padding:8px 0; font-size:13px; color:#6b7280; font-weight:600;">Activo reportado:</td>
+                <td style="padding:8px 0; font-size:13px; color:#111827;">
+                  <strong>${escapeHtml(assetTag)}</strong>
+                  ${assetBrand || assetModel ? ` — ${escapeHtml([assetBrand, assetModel].filter(Boolean).join(' '))}` : ''}
+                  ${assetSerial ? `<span style="color:#6b7280;"> · Serie: ${escapeHtml(assetSerial)}</span>` : ''}
+                </td>
+              </tr>
+              ` : ''}
               <tr style="border-top:1px solid #e5e7eb;">
                 <td style="padding:12px 0 8px 0; font-size:13px; color:#6b7280; font-weight:600;">Solicitante:</td>
                 <td style="padding:12px 0 8px 0; font-size:13px; color:#111827; font-weight:500;">${escapeHtml(requesterName)}</td>
@@ -1401,4 +2025,218 @@ function escapeHtml(value: string | null | undefined) {
 function escapeAttr(value: string | null | undefined) {
   // Good-enough for URLs
   return escapeHtml(value)
+}
+
+export function locationSummaryEmailTemplate(params: {
+  locationCode: string
+  locationName: string
+  summaryLabel?: string
+  totalTickets: number
+  openTickets: number
+  closedTickets: number
+  avgResolutionDays: number
+  openTicketsList: {
+    ticketNumber: string
+    title: string
+    priority: string
+    status: string
+    ageDays: number
+    ticketUrl: string
+  }[]
+}) {
+  const {
+    locationCode,
+    locationName,
+    summaryLabel = 'Estado actual de incidencias',
+    totalTickets,
+    openTickets,
+    closedTickets,
+    avgResolutionDays,
+    openTicketsList,
+  } = params
+
+  const subject = `Resumen de incidencias — [${locationCode}] ${locationName}`
+
+  const textLines: string[] = [
+    `Resumen de incidencias por sede`,
+    ``,
+    `Sede: [${locationCode}] ${locationName}`,
+    summaryLabel,
+    ``,
+    `Tickets totales: ${totalTickets}`,
+    `Abiertos: ${openTickets}`,
+    `Cerrados: ${closedTickets}`,
+    `Promedio de resolución: ${avgResolutionDays.toFixed(1)} días`,
+  ]
+
+  if (openTicketsList.length) {
+    textLines.push('', 'Tickets abiertos más relevantes:')
+    for (const t of openTicketsList) {
+      textLines.push(
+        `- #${t.ticketNumber} (${t.priority}) — ${t.title} [${t.status}] · ${t.ageDays} días · ${t.ticketUrl}`
+      )
+    }
+  }
+
+  const text = textLines.join('\n')
+
+  const ticketsRowsHtml = openTicketsList
+    .map((t) => {
+      return `
+      <tr>
+        <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; color:#111827; white-space:nowrap;">
+          #${escapeHtml(t.ticketNumber)}
+        </td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; color:#111827;">
+          ${escapeHtml(t.title)}
+        </td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; font-size:12px; color:#1d4ed8; white-space:nowrap;">
+          ${escapeHtml(t.priority)}
+        </td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; font-size:12px; color:#92400e; white-space:nowrap;">
+          ${escapeHtml(t.status)}
+        </td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; font-size:12px; color:#111827; white-space:nowrap; text-align:right;">
+          ${t.ageDays} días
+        </td>
+      </tr>
+      `
+    })
+    .join('')
+
+  const html = `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0; padding:0; background-color:#0f172a;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background:#0f172a; padding:24px 16px; color:#e5e7eb;">
+
+      <!-- Header / Logo -->
+      <div style="max-width:720px; margin:0 auto 24px auto; text-align:center;">
+        <img src="https://integrational3.com.mx/logorigen/ZIII%20logo.png" alt="ZIII Helpdesk" width="180" height="120" style="display:block; margin:0 auto; height:120px; width:auto; max-width:100%;" />
+      </div>
+
+      <!-- Main Card -->
+      <div style="max-width:720px; margin:0 auto; background:radial-gradient(circle at top left, #1d4ed8 0, #020617 55%); border-radius:24px; box-shadow:0 20px 40px -16px rgba(15,23,42,0.9); overflow:hidden; border:1px solid rgba(148,163,184,0.35);">
+
+        <!-- Gradient Header -->
+        <div style="position:relative; padding:16px 20px 14px 20px; background:linear-gradient(135deg, rgba(37,99,235,0.9) 0%, rgba(79,70,229,0.95) 40%, rgba(15,23,42,0.98) 100%);">
+          <div style="position:absolute; inset:auto -60px -80px auto; width:260px; height:260px; background:radial-gradient(circle, rgba(191,219,254,0.35), transparent 55%); opacity:0.7; filter:blur(2px);"></div>
+          <div style="position:relative; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:14px; background:rgba(15,23,42,0.15); border:1px solid rgba(191,219,254,0.5); display:flex; align-items:center; justify-content:center;">
+                <span style="font-size:22px;">📊</span>
+              </div>
+              <div>
+                <p style="margin:0 0 4px 0; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(219,234,254,0.9); font-weight:600;">
+                  Resumen ejecutivo por sede
+                </p>
+                <h1 style="margin:0; font-size:18px; font-weight:700; color:#eff6ff; letter-spacing:0.02em;">
+                  [${escapeHtml(locationCode)}] ${escapeHtml(locationName)}
+                </h1>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <p style="margin:0 0 4px 0; font-size:11px; color:rgba(219,234,254,0.9); text-transform:uppercase; letter-spacing:0.16em;">${escapeHtml(
+                summaryLabel
+              )}</p>
+              <p style="margin:0; font-size:12px; color:rgba(226,232,240,0.9);">ZIII Helpdesk · Mesa de Ayuda ITIL</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:24px 24px 22px 24px; background:radial-gradient(circle at top, rgba(15,23,42,1) 0, #020617 55%);">
+
+          <!-- KPI Row -->
+          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div style="flex:1 1 140px; min-width:0; background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(15,23,42,0.9)); border-radius:14px; padding:10px 12px; border:1px solid rgba(59,130,246,0.5);">
+              <p style="margin:0 0 4px 0; font-size:11px; color:#bfdbfe; text-transform:uppercase; letter-spacing:0.12em;">Tickets totales</p>
+              <p style="margin:0; font-size:20px; font-weight:700; color:#eff6ff;">${totalTickets}</p>
+            </div>
+            <div style="flex:1 1 140px; min-width:0; background:linear-gradient(135deg, rgba(251,191,36,0.1), rgba(15,23,42,0.9)); border-radius:14px; padding:10px 12px; border:1px solid rgba(251,191,36,0.7);">
+              <p style="margin:0 0 4px 0; font-size:11px; color:#fef3c7; text-transform:uppercase; letter-spacing:0.12em;">Abiertos</p>
+              <p style="margin:0; font-size:18px; font-weight:700; color:#fde68a;">${openTickets}</p>
+            </div>
+            <div style="flex:1 1 140px; min-width:0; background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(15,23,42,0.9)); border-radius:14px; padding:10px 12px; border:1px solid rgba(45,212,191,0.7);">
+              <p style="margin:0 0 4px 0; font-size:11px; color:#a7f3d0; text-transform:uppercase; letter-spacing:0.12em;">Cerrados</p>
+              <p style="margin:0; font-size:18px; font-weight:700; color:#6ee7b7;">${closedTickets}</p>
+            </div>
+            <div style="flex:1 1 160px; min-width:0; background:linear-gradient(135deg, rgba(129,140,248,0.12), rgba(15,23,42,0.95)); border-radius:14px; padding:10px 12px; border:1px solid rgba(129,140,248,0.7);">
+              <p style="margin:0 0 4px 0; font-size:11px; color:#e0e7ff; text-transform:uppercase; letter-spacing:0.12em;">Prom. resolución</p>
+              <p style="margin:0; font-size:18px; font-weight:700; color:#e5e7eb;">${avgResolutionDays.toFixed(
+                1
+              )} días</p>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div style="height:1px; background:linear-gradient(to right, transparent, rgba(148,163,184,0.7), transparent); margin:14px 0 18px 0;"></div>
+
+          <!-- Open Tickets List -->
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <p style="margin:0; font-size:13px; font-weight:600; color:#e5e7eb; letter-spacing:0.02em; text-transform:uppercase;">Tickets abiertos a revisar</p>
+              <p style="margin:0; font-size:11px; color:#9ca3af;">Prioriza estos casos para reducir el backlog de la sede.</p>
+            </div>
+
+            $${openTicketsList.length
+              ? `
+              <div style="border-radius:14px; border:1px solid rgba(148,163,184,0.5); background:radial-gradient(circle at top left, rgba(15,23,42,0.95), rgba(15,23,42,0.98)); overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse;">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px 12px; border-bottom:1px solid #1f2937; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#9ca3af; text-align:left;">Ticket</th>
+                      <th style="padding:8px 12px; border-bottom:1px solid #1f2937; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#9ca3af; text-align:left;">Título</th>
+                      <th style="padding:8px 12px; border-bottom:1px solid #1f2937; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#9ca3af; text-align:left;">Prioridad</th>
+                      <th style="padding:8px 12px; border-bottom:1px solid #1f2937; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#9ca3af; text-align:left;">Estado</th>
+                      <th style="padding:8px 12px; border-bottom:1px solid #1f2937; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#9ca3af; text-align:right;">Antigüedad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${ticketsRowsHtml}
+                  </tbody>
+                </table>
+              </div>
+            `
+              : `
+              <div style="padding:14px 12px; border-radius:12px; background:rgba(22,163,74,0.12); border:1px solid rgba(22,163,74,0.5);">
+                <p style="margin:0; font-size:13px; color:#bbf7d0;">
+                  ✅ No hay tickets abiertos pendientes en esta sede. Excelente trabajo de atención y cierre oportuno.
+                </p>
+              </div>
+            `}
+          </div>
+
+          <!-- Call to Action -->
+          <div style="margin-top:20px; padding:14px 14px 12px 14px; border-radius:14px; background:linear-gradient(135deg, rgba(37,99,235,0.18), rgba(56,189,248,0.16)); border:1px solid rgba(59,130,246,0.7);">
+            <p style="margin:0 0 6px 0; font-size:13px; color:#e5e7eb;">
+              <strong>Acción sugerida:</strong> Revisa con el responsable técnico y administrativo de la sede para priorizar la atención de los casos abiertos y definir fechas compromiso de solución.
+            </p>
+            <p style="margin:0; font-size:11px; color:#cbd5f5;">
+              Este resumen está diseñado para usarse en comités de seguimiento, reuniones operativas o para escalar incidentes críticos a la dirección correspondiente.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Footer inside card -->
+        <div style="padding:12px 18px 16px 18px; background:linear-gradient(to right, rgba(15,23,42,0.98), rgba(15,23,42,1)); border-top:1px solid rgba(30,64,175,0.75); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <p style="margin:0; font-size:11px; color:#9ca3af;">
+            Generado automáticamente por <strong style="color:#e5e7eb;">ZIII Helpdesk</strong> para dar trazabilidad a las incidencias por sede.
+          </p>
+          <p style="margin:0; font-size:11px; color:#6b7280; text-align:right;">
+            No respondas a este mensaje · Uso interno
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `
+
+  return { subject, html, text }
 }

@@ -86,6 +86,10 @@ export async function PATCH(
     updates.location_id = locationId || null
   }
 
+  if (body?.can_view_beo !== undefined) {
+    updates.can_view_beo = Boolean(body.can_view_beo)
+  }
+
   if (Object.keys(updates).length > 0) {
     const { error } = await admin.from('profiles').update(updates).eq('id', id)
     if (error) return new Response(error.message, { status: 400 })

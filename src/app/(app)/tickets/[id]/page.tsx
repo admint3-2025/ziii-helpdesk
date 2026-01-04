@@ -26,11 +26,47 @@ export default async function TicketDetailPage({
   }
 
   const [{ data: ticket }, { data: categories }] = await Promise.all([
-    supabase.from('tickets').select('*').eq('id', id).single(),
+    supabase
+      .from('tickets')
+      .select(`
+        *,
+        asset_id,
+        asset:assets!tickets_asset_id_fkey (
+          id,
+          asset_tag,
+          asset_type,
+          brand,
+          model,
+          serial_number,
+          status,
+          location_id,
+          asset_location:locations!location_id (id, code, name)
+        ),
+        location:locations!location_id (id, code, name)
+      `)
+      .eq('id', id)
+      .single(),
     supabase.from('categories').select('id,name,parent_id'),
   ])
 
   if (!ticket) notFound()
+
+  // Si el asset no se devolvió por RLS, recuperar vía admin client (solo para mostrar)
+  let ticketAsset = ticket.asset || null
+  if (!ticketAsset && ticket.asset_id) {
+    try {
+      const { data: adminAsset } = await adminClient
+        .from('assets')
+        .select('id, asset_tag, asset_type, brand, model, serial_number, status, location_id, asset_location:locations!location_id (id, code, name)')
+        .eq('id', ticket.asset_id)
+        .single()
+      if (adminAsset) {
+        ticketAsset = adminAsset
+      }
+    } catch (err) {
+      console.error('Error obteniendo asset con admin client:', err)
+    }
+  }
 
   // Obtener información de usuarios relacionados desde auth.users
   const userIds = [
@@ -113,7 +149,9 @@ export default async function TicketDetailPage({
           assigned_agent: ticket.assigned_agent_id ? usersMap.get(ticket.assigned_agent_id) : null,
           closed_by_user: ticket.closed_by ? usersMap.get(ticket.closed_by) : null,
           current_user_id: user?.id,
+          location: ticket.location || null,
         }}
+        asset={ticketAsset}
         comments={(comments ?? []).map(c => ({
           ...c,
           author: usersMap.get(c.author_id),

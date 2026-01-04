@@ -3,8 +3,20 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
+import DepartmentSelector from '@/components/DepartmentSelector'
+import BrandSelector from '@/components/BrandSelector'
 
-export default function AssetCreateForm() {
+type Location = {
+  id: string
+  name: string
+  code: string
+}
+
+type AssetCreateFormProps = {
+  locations: Location[]
+}
+
+export default function AssetCreateForm({ locations }: AssetCreateFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     asset_tag: '',
@@ -17,7 +29,12 @@ export default function AssetCreateForm() {
     purchase_date: '',
     warranty_end_date: '',
     location: '',
+    location_id: '',
     notes: '',
+    processor: '',
+    ram_gb: '',
+    storage_gb: '',
+    os: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,7 +60,12 @@ export default function AssetCreateForm() {
         purchase_date: formData.purchase_date || null,
         warranty_end_date: formData.warranty_end_date || null,
         location: formData.location || null,
+        location_id: formData.location_id || null,
         notes: formData.notes || null,
+        processor: formData.processor || null,
+        ram_gb: formData.ram_gb ? parseInt(formData.ram_gb) : null,
+        storage_gb: formData.storage_gb ? parseInt(formData.storage_gb) : null,
+        os: formData.os || null,
         created_by: user?.id || null,
       })
       .select()
@@ -55,6 +77,22 @@ export default function AssetCreateForm() {
       setIsSubmitting(false)
       return
     }
+
+    // Registrar en auditoría
+    await supabase.from('audit_log').insert({
+      entity_type: 'asset',
+      entity_id: data.id,
+      action: 'CREATE',
+      actor_id: user?.id,
+      metadata: {
+        asset_tag: data.asset_tag,
+        asset_type: data.asset_type,
+        status: data.status,
+        brand: data.brand,
+        model: data.model,
+        location_id: data.location_id,
+      },
+    })
 
     router.push(`/admin/assets/${data.id}`)
     router.refresh()
@@ -159,12 +197,11 @@ export default function AssetCreateForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Marca
               </label>
-              <input
-                type="text"
+              <BrandSelector
                 value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: Dell, HP, Lenovo"
+                onChange={(value) => setFormData({ ...formData, brand: value })}
+                placeholder="Selecciona una marca"
+                allowCreate={true}
               />
             </div>
 
@@ -173,27 +210,47 @@ export default function AssetCreateForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Departamento
               </label>
-              <input
-                type="text"
+              <DepartmentSelector
                 value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: TI, Contabilidad, Ventas"
+                onChange={(value) => setFormData({ ...formData, department: value })}
+                placeholder="Selecciona un departamento"
+                allowCreate={true}
               />
             </div>
 
-            {/* Ubicación */}
+            {/* Sede */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Ubicación
+                Sede / Ubicación
+              </label>
+              <select
+                value={formData.location_id}
+                onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Seleccionar sede...</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.code} - {loc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Sede donde se encuentra el activo</p>
+            </div>
+
+            {/* Ubicación física */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Ubicación Física
               </label>
               <input
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: Oficina Principal, Piso 2, Escritorio 15"
+                placeholder="Ej: Piso 2, Oficina 15, Escritorio A"
               />
+              <p className="text-xs text-gray-500 mt-1">Ubicación específica dentro de la sede</p>
             </div>
 
             {/* Fecha de Compra */}
@@ -221,20 +278,106 @@ export default function AssetCreateForm() {
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Notas */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Notas
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={4}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Información adicional sobre el activo..."
-              />
+      {/* Especificaciones Técnicas (solo para PC/Laptop) */}
+      {(formData.asset_type === 'DESKTOP' || formData.asset_type === 'LAPTOP') && (
+        <div className="card shadow-sm border border-slate-200">
+          <div className="card-body p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Especificaciones Técnicas</h2>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Procesador */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Procesador
+                </label>
+                <input
+                  type="text"
+                  value={formData.processor}
+                  onChange={(e) => setFormData({ ...formData, processor: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: Intel Core i7-1165G7, AMD Ryzen 5 5600"
+                />
+              </div>
+
+              {/* Memoria RAM */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Memoria RAM (GB)
+                </label>
+                <input
+                  type="number"
+                  value={formData.ram_gb}
+                  onChange={(e) => setFormData({ ...formData, ram_gb: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: 8, 16, 32"
+                  min="1"
+                />
+              </div>
+
+              {/* Almacenamiento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Almacenamiento (GB)
+                </label>
+                <input
+                  type="number"
+                  value={formData.storage_gb}
+                  onChange={(e) => setFormData({ ...formData, storage_gb: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: 256, 512, 1024"
+                  min="1"
+                />
+              </div>
+
+              {/* Sistema Operativo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Sistema Operativo
+                </label>
+                <input
+                  type="text"
+                  value={formData.os}
+                  onChange={(e) => setFormData({ ...formData, os: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: Windows 11 Pro, Ubuntu 22.04, macOS 13"
+                />
+              </div>
             </div>
+
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-blue-800">
+                  <strong>Importante:</strong> Estos datos técnicos son críticos para el inventario. Cualquier modificación quedará registrada en el historial con usuario responsable.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notas */}
+      <div className="card shadow-sm border border-slate-200">
+        <div className="card-body p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Información Adicional</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Notas
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={4}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Información adicional sobre el activo..."
+            />
           </div>
         </div>
       </div>

@@ -1,8 +1,21 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function ReportsPage() {
   const supabase = await createSupabaseServerClient()
+
+  // Verificar autenticación y rol del usuario
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isAdminOrSupervisor = profile?.role === 'admin' || profile?.role === 'supervisor'
 
   // Métricas para reportes
   const [
@@ -10,11 +23,15 @@ export default async function ReportsPage() {
     { count: activeTickets },
     { count: deletedTickets },
     { count: auditEvents },
+    { count: totalAssets },
+    { count: assetChanges },
   ] = await Promise.all([
     supabase.from('tickets').select('id', { count: 'exact', head: true }),
     supabase.from('tickets').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('tickets').select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null),
     supabase.from('audit_log').select('id', { count: 'exact', head: true }),
+    supabase.from('assets').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('asset_changes').select('id', { count: 'exact', head: true }),
   ])
 
   const reports = [
@@ -27,6 +44,7 @@ export default async function ReportsPage() {
       color: 'bg-blue-50 border-blue-200 text-blue-700',
       hoverColor: 'hover:bg-blue-100',
       enabled: true,
+      requiresAdminOrSupervisor: false, // Visible para todos
     },
     {
       title: 'Tickets Eliminados',
@@ -37,16 +55,67 @@ export default async function ReportsPage() {
       color: 'bg-red-50 border-red-200 text-red-700',
       hoverColor: 'hover:bg-red-100',
       enabled: true,
+      requiresAdminOrSupervisor: true,
     },
     {
       title: 'Historial de Auditoría',
-      description: 'Registro completo de todas las acciones en el sistema',
+      description: 'Registro completo de todas las acciones en el sistema con enlaces directos',
       icon: '📋',
       link: '/audit',
       count: auditEvents ?? 0,
       color: 'bg-indigo-50 border-indigo-200 text-indigo-700',
       hoverColor: 'hover:bg-indigo-100',
       enabled: true,
+      badge: 'Actualizado',
+      requiresAdminOrSupervisor: true,
+    },
+    {
+      title: 'Inventario de Activos',
+      description: 'Catálogo completo de activos con filtros por sede, tipo y estado. Exportable a Excel',
+      icon: '💻',
+      link: '/reports/asset-inventory',
+      count: totalAssets ?? 0,
+      color: 'bg-cyan-50 border-cyan-200 text-cyan-700',
+      hoverColor: 'hover:bg-cyan-100',
+      enabled: true,
+      badge: 'Actualizado',
+      requiresAdminOrSupervisor: true,
+    },
+    {
+      title: 'Historial de Activos',
+      description: 'Trazabilidad completa de cambios en activos: ubicación, responsable, specs técnicas',
+      icon: '📝',
+      link: '/reports/asset-changes',
+      count: assetChanges ?? 0,
+      color: 'bg-teal-50 border-teal-200 text-teal-700',
+      hoverColor: 'hover:bg-teal-100',
+      enabled: true,
+      badge: 'Nuevo',
+      requiresAdminOrSupervisor: true,
+    },
+    {
+      title: 'Cambios de Ubicación',
+      description: 'Auditoría de traslados de activos entre sedes con justificación y responsable',
+      icon: '🚚',
+      link: '/reports/asset-locations',
+      count: 0,
+      color: 'bg-amber-50 border-amber-200 text-amber-700',
+      hoverColor: 'hover:bg-amber-100',
+      enabled: true,
+      badge: 'Nuevo',
+      requiresAdminOrSupervisor: true,
+    },
+    {
+      title: 'Activos por Especificaciones',
+      description: 'Reporte técnico de PCs y Laptops: procesador, RAM, almacenamiento, SO',
+      icon: '🔧',
+      link: '/reports/asset-specs',
+      count: 0,
+      color: 'bg-violet-50 border-violet-200 text-violet-700',
+      hoverColor: 'hover:bg-violet-100',
+      enabled: true,
+      badge: 'Nuevo',
+      requiresAdminOrSupervisor: true,
     },
     {
       title: 'Actividad por Usuario',
@@ -58,6 +127,7 @@ export default async function ReportsPage() {
       hoverColor: 'hover:bg-purple-100',
       badge: 'Próximamente',
       enabled: false,
+      requiresAdminOrSupervisor: true,
     },
     {
       title: 'Tiempos de Resolución',
@@ -69,6 +139,7 @@ export default async function ReportsPage() {
       hoverColor: 'hover:bg-green-100',
       badge: 'Próximamente',
       enabled: false,
+      requiresAdminOrSupervisor: true,
     },
     {
       title: 'Cambios de Estado',
@@ -80,6 +151,7 @@ export default async function ReportsPage() {
       hoverColor: 'hover:bg-orange-100',
       badge: 'Próximamente',
       enabled: false,
+      requiresAdminOrSupervisor: true,
     },
     {
       title: 'Escalamientos N1→N2',
@@ -91,8 +163,17 @@ export default async function ReportsPage() {
       hoverColor: 'hover:bg-indigo-100',
       badge: 'Próximamente',
       enabled: false,
+      requiresAdminOrSupervisor: true,
     },
   ]
+
+  // Filtrar reportes según el rol del usuario
+  const visibleReports = reports.filter(report => {
+    if (report.requiresAdminOrSupervisor && !isAdminOrSupervisor) {
+      return false
+    }
+    return true
+  })
 
   return (
     <main className="p-6 space-y-6">
@@ -138,23 +219,27 @@ export default async function ReportsPage() {
             <div className="text-xl font-bold text-blue-600 mt-0.5">{activeTickets ?? 0}</div>
           </div>
         </div>
-        <div className="card bg-gradient-to-br from-white to-red-50">
-          <div className="p-3">
-            <div className="text-[11px] font-medium text-gray-600">Tickets Eliminados</div>
-            <div className="text-xl font-bold text-red-600 mt-0.5">{deletedTickets ?? 0}</div>
-          </div>
-        </div>
-        <div className="card bg-gradient-to-br from-white to-indigo-50">
-          <div className="p-3">
-            <div className="text-[11px] font-medium text-gray-600">Eventos de Auditoría</div>
-            <div className="text-xl font-bold text-indigo-600 mt-0.5">{auditEvents ?? 0}</div>
-          </div>
-        </div>
+        {isAdminOrSupervisor && (
+          <>
+            <div className="card bg-gradient-to-br from-white to-cyan-50">
+              <div className="p-3">
+                <div className="text-[11px] font-medium text-gray-600">Activos en Inventario</div>
+                <div className="text-xl font-bold text-cyan-600 mt-0.5">{totalAssets ?? 0}</div>
+              </div>
+            </div>
+            <div className="card bg-gradient-to-br from-white to-indigo-50">
+              <div className="p-3">
+                <div className="text-[11px] font-medium text-gray-600">Eventos de Auditoría</div>
+                <div className="text-xl font-bold text-indigo-600 mt-0.5">{auditEvents ?? 0}</div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Grid de reportes compacto */}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {reports.map((report) => (
+        {visibleReports.map((report) => (
           report.enabled ? (
             <Link
               key={report.link}
@@ -162,8 +247,14 @@ export default async function ReportsPage() {
               className={`card border ${report.color} ${report.hoverColor} transition-all duration-200 hover:shadow-md relative overflow-hidden`}
             >
               {report.badge && (
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-semibold text-gray-700">
-                  {report.badge}
+                <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  report.badge === 'Nuevo' 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
+                    : report.badge === 'Actualizado'
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50'
+                    : 'bg-white/80 backdrop-blur-sm text-gray-700'
+                }`}>
+                  {report.badge === 'Nuevo' && '✨ '}{report.badge}
                 </div>
               )}
               <div className="p-3">

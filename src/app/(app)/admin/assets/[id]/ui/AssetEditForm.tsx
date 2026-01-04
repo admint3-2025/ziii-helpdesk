@@ -1,7 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { updateAssetWithLocationChange } from '../actions'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
+
+type Location = {
+  id: string
+  name: string
+  code: string
+}
 
 type Asset = {
   id: string
@@ -15,17 +22,23 @@ type Asset = {
   purchase_date: string | null
   warranty_end_date: string | null
   location: string | null
+  location_id: string | null
   assigned_to: string | null
   notes: string | null
+  processor: string | null
+  ram_gb: number | null
+  storage_gb: number | null
+  os: string | null
 }
 
 type AssetEditFormProps = {
   asset: Asset
+  locations: Location[]
   onCancel: () => void
   onSuccess: () => void
 }
 
-export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditFormProps) {
+export default function AssetEditForm({ asset, locations, onCancel, onSuccess }: AssetEditFormProps) {
   const [formData, setFormData] = useState({
     asset_tag: asset.asset_tag,
     asset_type: asset.asset_type,
@@ -37,42 +50,183 @@ export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditF
     purchase_date: asset.purchase_date || '',
     warranty_end_date: asset.warranty_end_date || '',
     location: asset.location || '',
+    location_id: asset.location_id || '',
+    assigned_to: asset.assigned_to || '',
     notes: asset.notes || '',
+    processor: asset.processor || '',
+    ram_gb: asset.ram_gb?.toString() || '',
+    storage_gb: asset.storage_gb?.toString() || '',
+    os: asset.os || '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showLocationChangeModal, setShowLocationChangeModal] = useState(false)
+  const [locationChangeReason, setLocationChangeReason] = useState('')
+  const [pendingLocationId, setPendingLocationId] = useState<string | null>(null)
+  const [availableUsers, setAvailableUsers] = useState<Array<{id: string, name: string, email: string, role: string, location?: string}>>([])
+  const [selectedNotifyUsers, setSelectedNotifyUsers] = useState<string[]>([])
+  const [additionalEmails, setAdditionalEmails] = useState('')
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+  const [assignees, setAssignees] = useState<Array<{ id: string; name: string; email: string; location?: string }>>([])
+  const [loadingAssignees, setLoadingAssignees] = useState(false)
+
+  useEffect(() => {
+    const loadAssignees = async () => {
+      try {
+        setLoadingAssignees(true)
+        const res = await fetch('/api/admin/users')
+        if (!res.ok) return
+        const data = await res.json()
+        const users = (data.users || []) as Array<any>
+        const mapped = users
+          .filter((u) => u.email)
+          .map((u) => ({
+            id: u.id as string,
+            name: (u.full_name as string) || (u.email as string),
+            email: u.email as string,
+            location: (u.location_name as string) || undefined,
+          }))
+        setAssignees(mapped)
+      } catch {
+        setAssignees([])
+      } finally {
+        setLoadingAssignees(false)
+      }
+    }
+
+    loadAssignees()
+  }, [])
+
+  const handleLocationChange = async (newLocationId: string) => {
+    if (newLocationId !== asset.location_id) {
+      setPendingLocationId(newLocationId)
+      setLocationChangeReason('')
+      setSelectedNotifyUsers([])
+      setAdditionalEmails('')
+      setLoadingUsers(true)
+      setShowLocationChangeModal(true)
+      
+      // Cargar usuarios en background
+      try {
+        const response = await fetch('/api/users/notifiable')
+        const data = await response.json()
+        setAvailableUsers(data.users || [])
+      } catch (error) {
+        setAvailableUsers([])
+      } finally {
+        setLoadingUsers(false)
+      }
+    } else {
+      setFormData({ ...formData, location_id: newLocationId })
+    }
+  }
+
+  const confirmLocationChange = () => {
+    if (locationChangeReason.trim().length < 20) {
+      alert('La justificación debe tener al menos 20 caracteres')
+      return
+    }
+    
+    setFormData({ ...formData, location_id: pendingLocationId || '' })
+    setShowLocationChangeModal(false)
+  }
+
+  const cancelLocationChange = () => {
+    setPendingLocationId(null)
+    setLocationChangeReason('')
+    setSelectedNotifyUsers([])
+    setAdditionalEmails('')
+    setShowLocationChangeModal(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
 
-    const supabase = createSupabaseBrowserClient()
-
-    const { error } = await supabase
-      .from('assets')
-      .update({
-        asset_tag: formData.asset_tag,
-        asset_type: formData.asset_type,
-        status: formData.status,
-        serial_number: formData.serial_number || null,
-        model: formData.model || null,
-        brand: formData.brand || null,
-        department: formData.department || null,
-        purchase_date: formData.purchase_date || null,
-        warranty_end_date: formData.warranty_end_date || null,
-        location: formData.location || null,
-        notes: formData.notes || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', asset.id)
-
-    if (error) {
-      console.error('Error updating asset:', error)
-      alert('Error al actualizar el activo')
-      setIsSubmitting(false)
+    // Verificar si cambió la ubicación
+    if (formData.location_id !== asset.location_id && !locationChangeReason.trim()) {
+      alert('Debe proporcionar una justificación para el cambio de sede')
       return
     }
 
-    onSuccess()
+    setIsSubmitting(true)
+
+    try {
+      const result = await updateAssetWithLocationChange(
+        asset.id,
+        {
+          asset_tag: formData.asset_tag,
+          asset_type: formData.asset_type,
+          status: formData.status,
+          serial_number: formData.serial_number || null,
+          model: formData.model || null,
+          brand: formData.brand || null,
+          department: formData.department || null,
+          purchase_date: formData.purchase_date || null,
+          warranty_end_date: formData.warranty_end_date || null,
+          location: formData.location || null,
+          location_id: formData.location_id || null,
+          assigned_to: formData.assigned_to || null,
+          notes: formData.notes || null,
+          processor: formData.processor || null,
+          ram_gb: formData.ram_gb ? parseInt(formData.ram_gb) : null,
+          storage_gb: formData.storage_gb ? parseInt(formData.storage_gb) : null,
+          os: formData.os || null,
+        },
+        formData.location_id !== asset.location_id ? locationChangeReason : undefined
+      )
+
+      if (!result.success) {
+        // Verificar si es error de cambio de ubicación sin razón
+        if (result.error?.includes('LOCATION_CHANGE_REQUIRES_REASON')) {
+          alert('El cambio de sede requiere una justificación. Por favor, intente nuevamente.')
+          setIsSubmitting(false)
+          return
+        }
+        
+        alert('Error al actualizar el activo: ' + result.error)
+        setIsSubmitting(false)
+        return
+      }
+
+      // Si hubo cambio de sede, enviar notificaciones
+      if (formData.location_id !== asset.location_id) {
+        try {
+          const notifyResponse = await fetch('/api/assets/location-change-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              assetId: asset.id,
+              assetTag: asset.asset_tag,
+              fromLocationId: asset.location_id,
+              toLocationId: formData.location_id,
+              reason: locationChangeReason,
+              notifyUserIds: selectedNotifyUsers,
+              additionalEmails: additionalEmails
+            })
+          })
+          
+          const notifyResult = await notifyResponse.json()
+          console.log('Notificaciones enviadas:', notifyResult)
+          
+          if (!notifyResult.success) {
+            console.error('Error al enviar notificaciones:', notifyResult.error)
+          }
+        } catch (notifyError) {
+          console.error('Error al enviar notificaciones:', notifyError)
+        }
+        
+        // Limpiar estados de notificación después de enviar
+        setLocationChangeReason('')
+        setSelectedNotifyUsers([])
+        setAdditionalEmails('')
+      }
+
+      onSuccess()
+    } catch (err) {
+      console.error('Error:', err)
+      alert('Error al actualizar el activo')
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -150,6 +304,31 @@ export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditF
                 </select>
               </div>
 
+              {/* Responsable / Asignado a */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Responsable del equipo
+                </label>
+                <select
+                  value={formData.assigned_to}
+                  onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                >
+                  <option value="">Sin asignar</option>
+                  {loadingAssignees && <option> Cargando usuarios... </option>}
+                  {!loadingAssignees &&
+                    assignees.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.location ? `[${u.location}] ` : ''}
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Este cambio quedará registrado en la auditoría de responsables del activo.
+                </p>
+              </div>
+
               {/* Número de Serie */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -206,18 +385,46 @@ export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditF
                 />
               </div>
 
-              {/* Ubicación */}
+              {/* Sede */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Ubicación
+                  Sede / Ubicación
+                </label>
+                <select
+                  value={formData.location_id}
+                  onChange={(e) => handleLocationChange(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Seleccionar sede...</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.code} - {loc.name}
+                    </option>
+                  ))}
+                </select>
+                {formData.location_id !== asset.location_id && (
+                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Cambio de sede - Se requiere justificación y notificación
+                  </p>
+                )}
+              </div>
+
+              {/* Ubicación física */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Ubicación Física
                 </label>
                 <input
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ej: Oficina Principal, Piso 2"
+                  placeholder="Ej: Piso 2, Oficina 15"
                 />
+                <p className="text-xs text-gray-500 mt-1">Ubicación específica dentro de la sede</p>
               </div>
 
               {/* Fecha de Compra */}
@@ -245,20 +452,106 @@ export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditF
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Notas */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Notas
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={4}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Información adicional sobre el activo..."
-                />
+        {/* Especificaciones Técnicas (solo para PC/Laptop) */}
+        {(formData.asset_type === 'DESKTOP' || formData.asset_type === 'LAPTOP') && (
+          <div className="card shadow-sm border border-slate-200">
+            <div className="card-body p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Especificaciones Técnicas</h2>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Procesador */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Procesador
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.processor}
+                    onChange={(e) => setFormData({ ...formData, processor: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: Intel Core i7-1165G7, AMD Ryzen 5 5600"
+                  />
+                </div>
+
+                {/* Memoria RAM */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Memoria RAM (GB)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.ram_gb}
+                    onChange={(e) => setFormData({ ...formData, ram_gb: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: 8, 16, 32"
+                    min="1"
+                  />
+                </div>
+
+                {/* Almacenamiento */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Almacenamiento (GB)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.storage_gb}
+                    onChange={(e) => setFormData({ ...formData, storage_gb: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: 256, 512, 1024"
+                    min="1"
+                  />
+                </div>
+
+                {/* Sistema Operativo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Sistema Operativo
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.os}
+                    onChange={(e) => setFormData({ ...formData, os: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: Windows 11 Pro, Ubuntu 22.04, macOS 13"
+                  />
+                </div>
               </div>
+
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-blue-800">
+                    <strong>Importante:</strong> Estos datos técnicos son críticos para el inventario. Cualquier modificación quedará registrada en el historial con usuario responsable.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notas */}
+        <div className="card shadow-sm border border-slate-200">
+          <div className="card-body p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Información Adicional</h2>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Notas
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={4}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Información adicional sobre el activo..."
+              />
             </div>
           </div>
         </div>
@@ -297,6 +590,118 @@ export default function AssetEditForm({ asset, onCancel, onSuccess }: AssetEditF
           </button>
         </div>
       </form>
+
+      {/* Modal de confirmación de cambio de sede */}
+      {showLocationChangeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Cambio de Sede del Activo</h3>
+                  <p className="text-sm text-gray-600">Se requiere justificación y auditoría</p>
+                </div>
+              </div>
+
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  <strong>Activo:</strong> {asset.asset_tag}
+                </p>
+                <p className="text-sm text-blue-900 mt-1">
+                  <strong>Nueva sede:</strong> {locations.find(l => l.id === pendingLocationId)?.name}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Justificación del cambio <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={locationChangeReason}
+                  onChange={(e) => setLocationChangeReason(e.target.value)}
+                  rows={4}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Explique el motivo del cambio de sede (mínimo 10 caracteres)&#10;Ejemplo: Reasignación de activo por cambio de área del usuario, traslado definitivo a nueva sucursal, etc."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {locationChangeReason.length}/20 caracteres mínimos
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Usuarios a notificar
+                </label>
+                {loadingUsers ? (
+                  <div className="text-center py-4 text-gray-500">Cargando usuarios...</div>
+                ) : (
+                  <select
+                    multiple
+                    value={selectedNotifyUsers}
+                    onChange={(e) => setSelectedNotifyUsers(Array.from(e.target.selectedOptions, option => option.value))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    size={Math.min(availableUsers.length || 5, 7)}
+                  >
+                    {availableUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.role === 'admin' ? '👨‍💼' : '👨‍🏫'} [{user.location || '?'}] {user.name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Mantén presionado Ctrl/Cmd para seleccionar múltiples
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Correos adicionales (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={additionalEmails}
+                  onChange={(e) => setAdditionalEmails(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="correo1@ejemplo.com, correo2@ejemplo.com"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Separar múltiples correos con comas
+                </p>
+              </div>
+
+              <div className="mb-4 p-3 bg-amber-50 rounded border border-amber-200">
+                <p className="text-xs text-amber-800">
+                  ⚠️ <strong>Este cambio será registrado en auditoría</strong>
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cancelLocationChange}
+                  className="btn btn-secondary"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLocationChange}
+                  disabled={locationChangeReason.trim().length < 20}
+                  className="btn btn-warning"
+                >
+                  Confirmar Cambio
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

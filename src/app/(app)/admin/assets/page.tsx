@@ -5,17 +5,66 @@ import AssetFilters from './ui/AssetFilters'
 export default async function AssetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; type?: string; status?: string }>
+  searchParams: Promise<{ search?: string; type?: string; status?: string; location?: string }>
 }) {
   const supabase = await createSupabaseServerClient()
   const params = await searchParams
   
+  // Obtener el rol del usuario actual
+  const { data: { user } } = await supabase.auth.getUser()
+  let userRole = 'user'
+  let userLocations: any[] = []
+  
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    userRole = profile?.role || 'user'
+    
+    // Si no es admin, obtener sus sedes asignadas
+    if (userRole !== 'admin') {
+      const { data: assignedLocations } = await supabase
+        .from('user_locations')
+        .select(`
+          location:locations(id, name, code)
+        `)
+        .eq('user_id', user.id)
+      
+      userLocations = assignedLocations?.map(ul => ul.location).filter(Boolean) || []
+    }
+  }
+  
   // Construir query base
   let query = supabase
     .from('assets')
-    .select('*')
+    .select(`
+      *,
+      location:locations(id, name, code)
+    `)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+
+  // Filtrar por sede según el rol del usuario
+  if (userRole !== 'admin' && userRole !== 'supervisor') {
+    // agent_l1 y agent_l2 solo ven activos de sus sedes asignadas
+    if (user) {
+      const { data: userLocs } = await supabase
+        .from('user_locations')
+        .select('location_id')
+        .eq('user_id', user.id)
+      
+      const locationIds = userLocs?.map(ul => ul.location_id).filter(Boolean) || []
+      
+      if (locationIds.length > 0) {
+        query = query.in('location_id', locationIds)
+      } else {
+        // Si no tiene sedes asignadas, no ver ningún activo
+        query = query.is('location_id', null)
+      }
+    }
+  }
 
   // Aplicar filtros
   if (params.search) {
@@ -29,8 +78,46 @@ export default async function AssetsPage({
   if (params.status) {
     query = query.eq('status', params.status)
   }
+  
+  if (params.location) {
+    query = query.eq('location_id', params.location)
+  }
 
   const { data: assets, error } = await query
+  
+  // Obtener sedes para el filtro según el rol del usuario
+  let locationsQuery = supabase
+    .from('locations')
+    .select('id, name, code')
+    .eq('is_active', true)
+    .order('name')
+  
+  // Si no es admin, filtrar por sedes asignadas
+  if (userRole !== 'admin' && user) {
+    const { data: userLocs } = await supabase
+      .from('user_locations')
+      .select('location_id')
+      .eq('user_id', user.id)
+    
+    const locationIds = userLocs?.map(ul => ul.location_id).filter(Boolean) || []
+    
+    // Incluir también la location_id del perfil si existe
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('location_id')
+      .eq('id', user.id)
+      .single()
+    
+    if (profile?.location_id && !locationIds.includes(profile.location_id)) {
+      locationIds.push(profile.location_id)
+    }
+    
+    if (locationIds.length > 0) {
+      locationsQuery = locationsQuery.in('id', locationIds)
+    }
+  }
+  
+  const { data: locations } = await locationsQuery
 
   if (error) {
     console.error('Error fetching assets:', error)
@@ -52,16 +139,37 @@ export default async function AssetsPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión de Activos</h1>
           <p className="text-sm text-gray-600 mt-1">Administra el inventario de equipos de TI</p>
+          {userRole !== 'admin' && userLocations.length > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="text-gray-600">
+                Mis sedes: {userLocations.map(l => l.code).join(', ')}
+              </span>
+            </div>
+          )}
         </div>
-        <Link
-          href="/admin/assets/new"
-          className="btn btn-primary inline-flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo Activo
-        </Link>
+        {(userRole === 'admin' || userRole === 'supervisor') && (
+          <Link
+            href="/admin/assets/new"
+            className="btn btn-primary inline-flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Activo
+          </Link>
+        )}
+        {(userRole === 'agent_l1' || userRole === 'agent_l2') && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Solo lectura - Consultar con supervisor</span>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -132,7 +240,7 @@ export default async function AssetsPage({
       </div>
 
       {/* Filtros */}
-      <AssetFilters />
+      <AssetFilters locations={locations || []} userRole={userRole} />
 
       {/* Lista de Activos */}
       <div className="card shadow-sm border border-slate-200">
@@ -208,8 +316,21 @@ export default async function AssetsPage({
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {asset.location || 'No especificada'}
+                      <td className="px-6 py-4">
+                        {asset.location ? (
+                          <div className="flex items-center gap-1.5">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{asset.location.code}</div>
+                              <div className="text-xs text-gray-500">{asset.location.name}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Sin asignar</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <Link

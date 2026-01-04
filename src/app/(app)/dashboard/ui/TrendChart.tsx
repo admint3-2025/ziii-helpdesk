@@ -34,7 +34,7 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
   const areaD = `${pathD} L ${chartWidth},${chartHeight} L 0,${chartHeight} Z`
 
   return (
-    <div className="card shadow-lg border-0 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <div className="card shadow-lg border-0 overflow-visible hover:shadow-xl transition-shadow duration-300">
       <div className="card-body">
         {/* Header con métricas resumen */}
         <div className="flex items-start justify-between mb-4">
@@ -71,7 +71,10 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-3 text-center border border-purple-100">
             <div className="text-2xl font-bold text-purple-600">{avgPerDay}</div>
-            <div className="text-[10px] text-purple-700 font-medium uppercase tracking-wide mt-0.5">Promedio/día</div>
+            <div className="text-[10px] text-purple-700 font-medium uppercase tracking-wide mt-0.5 leading-tight">
+              <span className="block">Promedio</span>
+              <span className="block">/día</span>
+            </div>
           </div>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 text-center border border-green-100">
             <div className="text-2xl font-bold text-green-600">{todayCount}</div>
@@ -206,19 +209,21 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
           )}
         </div>
 
-        {/* Etiquetas de días con fechas exactas */}
-        <div className="grid grid-cols-7 gap-1 text-xs mt-4">
+        {/* Etiquetas de días (más compactas) */}
+        <div className="grid grid-cols-7 gap-0.5 text-[11px] mt-3">
           {data.map((item, idx) => {
             const isHovered = hoveredIndex === idx
             const isToday = idx === data.length - 1
-            const dateObj = new Date(item.date)
+            // Parsear fecha local correctamente para evitar problema de zona horaria
+            const [year, month, day] = item.date.split('-').map(Number)
+            const dateObj = new Date(year, month - 1, day)
             
             return (
               <div 
                 key={idx} 
-                className={`text-center transition-all duration-200 cursor-pointer p-1.5 rounded-lg ${
+                className={`text-center transition-all duration-200 cursor-pointer px-1.5 py-1 rounded-md ${
                   isHovered 
-                    ? 'bg-green-100 transform scale-105' 
+                    ? 'bg-green-50 border border-green-200 transform scale-105' 
                     : isToday 
                       ? 'bg-blue-50 border border-blue-200' 
                       : 'hover:bg-gray-50'
@@ -226,8 +231,19 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
                 onMouseEnter={() => setHoveredIndex(idx)}
                 onMouseLeave={() => setHoveredIndex(null)}
               >
+                {/* Día de la semana */}
+                <div className={`text-[9px] uppercase tracking-wide font-medium mb-0.5 ${
+                  isHovered 
+                    ? 'text-green-700' 
+                    : isToday 
+                      ? 'text-blue-700' 
+                      : 'text-gray-700'
+                }`}>
+                  {dateObj.toLocaleDateString('es-ES', { weekday: 'short' })}
+                </div>
+                
                 {/* Número del día del mes (fecha exacta) */}
-                <div className={`font-bold text-lg ${
+                <div className={`font-semibold text-sm ${
                   isHovered 
                     ? 'text-green-700' 
                     : isToday 
@@ -237,27 +253,8 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
                   {dateObj.getDate()}
                 </div>
                 
-                {/* Día de la semana */}
-                <div className={`text-[10px] uppercase tracking-wide font-medium ${
-                  isHovered 
-                    ? 'text-green-600' 
-                    : isToday 
-                      ? 'text-blue-600' 
-                      : 'text-gray-500'
-                }`}>
-                  {dateObj.toLocaleDateString('es-ES', { weekday: 'short' })}
-                </div>
-                
                 {/* Número de tickets creados ese día */}
-                <div className={`text-[11px] font-semibold mt-1 px-1.5 py-0.5 rounded ${
-                  isHovered 
-                    ? 'bg-green-600 text-white' 
-                    : isToday 
-                      ? 'bg-blue-600 text-white' 
-                      : item.count > 0 
-                        ? 'bg-gray-200 text-gray-700'
-                        : 'bg-gray-100 text-gray-400'
-                }`}>
+                <div className="text-[10px] text-gray-500 mt-0.5">
                   {item.count} {item.count === 1 ? 'ticket' : 'tickets'}
                 </div>
                 

@@ -299,27 +299,26 @@ export default function TicketActions({
       />
 
       <div className="sticky top-6">
-        <div className="card shadow-lg border-0 overflow-hidden">
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 px-5 py-4">
-          <div className="flex items-center gap-2 text-white">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Acciones</h3>
+        <div className="card shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-r from-indigo-50 via-sky-50 to-white border-b border-indigo-100 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">⚡</span>
+            <div>
+              <h3 className="text-xs font-semibold text-indigo-900 uppercase tracking-wide">Acciones del ticket</h3>
+              <p className="mt-0.5 text-[11px] text-indigo-600">Flujo operativo: estado, escalamiento, correo y eliminación auditable.</p>
+            </div>
           </div>
         </div>
 
-        <div className="card-body space-y-4">
+        <div className="p-4 space-y-4 text-sm">
           {/* Cambiar estado */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              Estado
+          <div>
+            <label className="block text-xs font-semibold text-indigo-800 mb-1">
+              Estado del ticket
             </label>
+            <p className="text-[11px] text-indigo-600 mb-1">Define en qué etapa del ciclo de atención se encuentra.</p>
             <select
-              className="select w-full text-sm"
+              className="select select-sm w-full"
               value={nextStatus}
               onChange={(e) => setNextStatus(e.target.value)}
             >
@@ -331,19 +330,17 @@ export default function TicketActions({
             </select>
 
             {nextStatus === 'ASSIGNED' && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <label className="flex items-center gap-2 text-xs font-semibold text-blue-800 mb-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Asignar a
+              <div className="mt-2 p-2.5 bg-blue-50 rounded border border-blue-200">
+                <label className="block text-xs font-semibold text-blue-900 mb-1">
+                  Asignar responsable
                 </label>
+                <p className="text-[11px] text-blue-700 mb-1">Selecciona el técnico que quedará como responsable del ticket.</p>
                 <select
-                  className="select w-full text-sm"
+                  className="select select-sm w-full"
                   value={assignedAgentId}
                   onChange={(e) => setAssignedAgentId(e.target.value)}
                 >
-                  <option value="">-- Seleccionar agente --</option>
+                  <option value="">-- Seleccionar técnico --</option>
                   {agents.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.full_name || a.id}
@@ -353,68 +350,44 @@ export default function TicketActions({
               </div>
             )}
 
-            <button
-              type="button"
-              disabled={busy}
-              onClick={updateStatus}
-              className="btn btn-primary w-full flex items-center justify-center gap-2 mt-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {busy ? 'Aplicando…' : 'Aplicar cambio'}
-            </button>
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={updateStatus}
+                className="btn btn-sm btn-primary px-4"
+              >
+                {busy ? 'Aplicando…' : 'Aplicar estado'}
+              </button>
+            </div>
           </div>
 
           {/* Escalamiento */}
-          <div className="pt-4 border-t border-gray-200">
-            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
-              <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-              </svg>
-              Escalamiento
+          <div className="pt-3 border-t border-gray-200">
+            <label className="block text-xs font-semibold text-amber-800 mb-1">
+              Escalamiento a Nivel 2
             </label>
+            <p className="text-[11px] text-amber-700 mb-2">Usa esta sección cuando el caso requiere atención de un nivel superior.</p>
             
             {/* Técnico L1: Solo puede solicitar escalamiento */}
             {userRole === 'agent_l1' && supportLevel === 1 && currentStatus !== 'CLOSED' && (
               <>
                 {hasEscalationRequest ? (
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-3">
-                    <div className="flex items-start gap-2">
-                      <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <p className="text-sm text-amber-900 font-semibold mb-1">⏳ Solicitud pendiente</p>
-                        <p className="text-xs text-amber-700">Ya has solicitado el escalamiento. Esperando aprobación del supervisor.</p>
-                      </div>
-                    </div>
+                  <div className="p-2.5 bg-amber-50 rounded border border-amber-200">
+                    <p className="text-xs text-amber-900 font-medium">Solicitud pendiente</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Esperando aprobación.</p>
                   </div>
                 ) : (
-                  <>
-                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 mb-3">
-                      <div className="flex items-start gap-2">
-                        <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                          <p className="text-xs text-amber-900 font-semibold mb-1">Solicitar aprobación</p>
-                          <p className="text-xs text-amber-700">Como técnico L1, debes solicitar al supervisor de tu sede que apruebe el escalamiento a Nivel 2.</p>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       disabled={busy}
                       onClick={handleRequestEscalation}
-                      className="btn w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      className="btn btn-sm btn-outline bg-white text-amber-700 border-amber-300 hover:bg-amber-50"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
                       Solicitar escalamiento
                     </button>
-                  </>
+                  </div>
                 )}
               </>
             )}
@@ -422,15 +395,9 @@ export default function TicketActions({
             {/* Admin, Supervisor, L2: Pueden escalar directamente */}
             {['admin', 'supervisor', 'agent_l2'].includes(userRole) && supportLevel === 1 && currentStatus !== 'CLOSED' && (
               <>
-                <div className="p-3 bg-orange-50 rounded-lg border border-orange-100 mb-2">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-orange-800 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Asignar a (Nivel 2)
-                  </label>
+                <div className="mt-1 space-y-2">
                   <select
-                    className="select w-full text-sm"
+                    className="select select-sm w-full"
                     value={escalateAgentId}
                     onChange={(e) => setEscalateAgentId(e.target.value)}
                     disabled={busy}
@@ -442,111 +409,103 @@ export default function TicketActions({
                       </option>
                     ))}
                   </select>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={busy || !escalateAgentId}
+                      onClick={escalateToL2}
+                      className="btn btn-sm bg-amber-600 hover:bg-amber-700 text-white px-4 whitespace-nowrap"
+                    >
+                      Escalar a Nivel 2
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={escalateToL2}
-                  className="btn btn-secondary w-full flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                  </svg>
-                  Escalar a Nivel 2
-                </button>
               </>
             )}
             
             {currentStatus === 'CLOSED' && (
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-2 text-center">
-                <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <p className="text-xs text-gray-600 font-medium">Ticket cerrado</p>
-                <p className="text-xs text-gray-500 mt-1">El escalamiento no está disponible</p>
+              <div className="p-2.5 bg-gray-50 rounded border border-gray-200 text-center">
+                <p className="text-xs text-gray-600">Ticket cerrado: no se puede escalar.</p>
               </div>
             )}
 
             {supportLevel === 2 && (
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-center">
-                <svg className="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-xs text-blue-700 font-medium">Ya está en Nivel 2</p>
+              <div className="p-2.5 bg-blue-50 rounded border border-blue-200 text-center">
+                <p className="text-xs text-blue-700">Ya está en Nivel 2</p>
               </div>
             )}
           </div>
 
           {/* Reapertura */}
           {currentStatus === 'CLOSED' && (
-            <div className="pt-4 border-t border-gray-200">
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Reabrir Ticket
-              </label>
-              <div className="p-3 bg-green-50 rounded-lg border border-green-100 mb-2">
-                <p className="text-xs text-green-800 mb-2">
-                  ℹ️ El ticket se reabrirá en estado <strong>En progreso</strong> y se te asignará automáticamente.
-                </p>
+            <div className="pt-3 border-t border-gray-200">
+              <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-green-100 rounded-lg">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-green-800">¿Necesitas reabrir este ticket?</p>
+                      <p className="text-[11px] text-green-600">Si el problema persiste, puedes reactivarlo</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={handleReopenTicket}
+                    className="btn btn-sm bg-green-600 hover:bg-green-700 text-white shadow-sm whitespace-nowrap"
+                  >
+                    🔄 Reabrir
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Enviar ticket por email (solo admin y supervisor) y eliminación */}
+          {(userRole === "admin" || userRole === "supervisor") && (
+            <div className="pt-3 border-t border-gray-200 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-blue-800">Enviar por correo</p>
+                  <p className="text-[11px] text-blue-600">Envía un resumen completo del ticket para investigación o deslinde.</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setShowEmailModal(true)}
+                  className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                >
+                  Enviar resumen
+                </button>
               </div>
               <button
                 type="button"
                 disabled={busy}
-                onClick={handleReopenTicket}
-                className="btn w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                onClick={softDelete}
+                className="btn btn-sm btn-outline btn-error"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-                Reabrir ticket
+                Eliminar
               </button>
             </div>
           )}
 
-          {/* Enviar ticket por email (solo admin y supervisor) */}
-          {(userRole === 'admin' || userRole === 'supervisor') && (
-            <div className="pt-4 border-t border-gray-200">
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Enviar por Correo
-              </label>
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 mb-2">
-                <p className="text-xs text-blue-800">
-                  📧 Envía la información completa del ticket para investigación o deslinde de responsabilidades.
-                </p>
-              </div>
+          {/* Eliminación (para otros roles con permiso de borrar en el futuro) */}
+          {(userRole !== "admin" && userRole !== "supervisor") && (
+            <div className="pt-3 border-t border-gray-200 flex justify-end">
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => setShowEmailModal(true)}
-                className="btn w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={softDelete}
+                className="btn btn-sm btn-outline btn-error"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                Enviar información del ticket
+                Eliminar
               </button>
             </div>
           )}
-
-          {/* Eliminación */}
-          <div className="pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={softDelete}
-              className="btn btn-danger w-full flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Eliminar (auditable)
-            </button>
-          </div>
 
           {error ? (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">

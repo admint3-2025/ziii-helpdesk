@@ -68,14 +68,14 @@ export default function TicketAttachments({ ticketId, canDelete }: Props) {
   if (loading) {
     return (
       <div className="card shadow-lg border-0">
-        <div className="card-body">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card-body pt-3 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 bg-green-100 rounded-lg">
+              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Archivos adjuntos</h3>
+            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Archivos adjuntos</h3>
           </div>
           <div className="flex items-center justify-center py-8">
             <svg className="animate-spin w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24">
@@ -91,16 +91,16 @@ export default function TicketAttachments({ ticketId, canDelete }: Props) {
   if (attachments.length === 0) {
     return (
       <div className="card shadow-lg border-0 bg-gray-50">
-        <div className="card-body">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-gray-200 rounded-lg">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card-body pt-3 pb-4">
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="p-1.5 bg-gray-200 rounded-lg">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Archivos adjuntos</h3>
+            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Archivos adjuntos</h3>
           </div>
-          <p className="text-sm text-gray-500 text-center py-4">
+          <p className="text-sm text-gray-500 text-center py-3">
             No hay archivos adjuntos en este ticket
           </p>
         </div>
@@ -110,14 +110,14 @@ export default function TicketAttachments({ ticketId, canDelete }: Props) {
 
   return (
     <div className="card shadow-lg border-0">
-      <div className="card-body">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="card-body pt-3 pb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="p-1.5 bg-green-100 rounded-lg">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">
             Archivos adjuntos ({attachments.length})
           </h3>
         </div>

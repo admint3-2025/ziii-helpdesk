@@ -1,6 +1,7 @@
 'use server'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { isAllowedTransition } from '@/lib/tickets/workflow'
 import { 
   notifyTicketAssigned, 
@@ -206,6 +207,62 @@ export async function updateTicketStatus(input: UpdateTicketStatusInput) {
   }
 
   return { success: true }
+}
+
+type AssignAssetInput = {
+  ticketId: string
+  assetIdentifier: string
+}
+
+export async function assignTicketAsset(input: AssignAssetInput) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['admin', 'supervisor'].includes(profile.role)) {
+    return { error: 'Solo admin o supervisor pueden editar el ticket' }
+  }
+
+  const value = (input.assetIdentifier || '').trim()
+  if (!value) return { error: 'Proporciona el asset tag o ID' }
+
+  const isUuid = value.includes('-') && value.length >= 32
+
+  const assetQuery = supabase
+    .from('assets')
+    .select('id, asset_tag, deleted_at')
+    .is('deleted_at', null)
+    .limit(1)
+
+  const { data: asset, error: assetErr } = isUuid
+    ? await assetQuery.eq('id', value).single()
+    : await assetQuery.ilike('asset_tag', value).single()
+
+  if (assetErr || !asset) {
+    return { error: 'Activo no encontrado o está dado de baja' }
+  }
+
+  const { error: updateErr } = await supabase
+    .from('tickets')
+    .update({ asset_id: asset.id })
+    .eq('id', input.ticketId)
+
+  if (updateErr) return { error: updateErr.message }
+
+  await revalidatePath(`/tickets/${input.ticketId}`)
+  return { success: true, asset_tag: asset.asset_tag }
+}
+
+export async function assignTicketAssetAction(formData: FormData) {
+  const ticketId = String(formData.get('ticketId') || '')
+  const assetIdentifier = String(formData.get('assetIdentifier') || '')
+  return assignTicketAsset({ ticketId, assetIdentifier })
 }
 
 export async function escalateTicket(ticketId: string, currentLevel: number, assignToAgentId?: string) {
@@ -862,6 +919,15 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
       return { error: 'Ticket no encontrado o sin permisos para acceder' }
     }
 
+    // Obtener información del activo (si existe)
+    const { data: asset } = ticket.asset_id
+      ? await supabase
+          .from('assets')
+          .select('asset_tag, asset_type, brand, model, serial_number')
+          .eq('id', ticket.asset_id)
+          .single()
+      : { data: null }
+
     // Obtener nombres de usuarios desde profiles
     const { data: requesterProfile } = await supabase
       .from('profiles')
@@ -968,6 +1034,11 @@ export async function sendTicketByEmail(input: SendTicketEmailInput) {
       status: STATUS_LABELS[ticket.status] || ticket.status,
       locationName: (ticket.locations as any)?.name || 'Sin sede',
       locationCode: (ticket.locations as any)?.code || '-',
+       assetTag: asset?.asset_tag || undefined,
+       assetType: asset?.asset_type || undefined,
+       assetBrand: asset?.brand || undefined,
+       assetModel: asset?.model || undefined,
+       assetSerial: asset?.serial_number || undefined,
       requesterName: requesterProfile?.full_name || 'Desconocido',
       assignedAgentName: agentProfile?.full_name || null,
       createdAt: new Date(ticket.created_at).toLocaleString('es-MX', {

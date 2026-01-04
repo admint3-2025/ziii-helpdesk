@@ -97,23 +97,49 @@ export default function LoginForm() {
       ) : null}
 
       {mode === 'forgot' && sent ? (
-        <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-          Si el correo existe, enviamos un link de recuperación. Revisa tu bandeja y spam.
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          ✅ Solicitud recibida. Un administrador te enviará una contraseña temporal en un máximo de 2 horas.
         </div>
       ) : null}
 
       <button
         type="submit"
         disabled={busy}
-        className="btn btn-primary w-full"
+        className={`btn btn-primary w-full flex items-center justify-center gap-2 transition-transform duration-150 ${
+          busy ? 'scale-[0.99] shadow-lg shadow-blue-200' : 'hover:-translate-y-0.5 hover:shadow-md'
+        }`}
       >
-        {mode === 'login'
-          ? busy
-            ? 'Ingresando…'
-            : 'Ingresar'
-          : busy
-            ? 'Enviando…'
-            : 'Enviar link de recuperación'}
+        {busy && (
+          <svg
+            className="h-4 w-4 animate-spin text-white/80"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+            />
+          </svg>
+        )}
+        <span>
+          {mode === 'login'
+            ? busy
+              ? 'Ingresando…'
+              : 'Ingresar'
+            : busy
+              ? 'Enviando…'
+              : 'Enviar link de recuperación'}
+        </span>
       </button>
 
       {mode === 'login' ? (
@@ -147,7 +173,7 @@ export default function LoginForm() {
       <div className="text-xs text-gray-500">
         {mode === 'login'
           ? 'Si no tienes usuario, solicita alta al administrador.'
-          : 'Te enviaremos un correo para restablecer tu contraseña.'}
+          : 'El administrador del sistema será notificado y te asignará una contraseña temporal.'}
       </div>
     </form>
   )

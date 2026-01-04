@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Fragment } from 'react'
+import DepartmentSelector from '@/components/DepartmentSelector'
+import PositionSelector from '@/components/PositionSelector'
 
 type Role = 'requester' | 'agent_l1' | 'agent_l2' | 'supervisor' | 'auditor' | 'admin'
 
@@ -26,6 +28,7 @@ type UserRow = {
   supervisor_id: string | null
   location_id: string | null
   location_name: string | null
+  can_view_beo: boolean | null
 }
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -57,14 +60,63 @@ export default function UserList() {
   const [editBuilding, setEditBuilding] = useState('')
   const [editFloor, setEditFloor] = useState('')
   const [editLocationId, setEditLocationId] = useState<string>('')
+  const [editCanViewBeo, setEditCanViewBeo] = useState(false)
+
+  // Filtros
+  const [searchText, setSearchText] = useState('')
+  const [filterRole, setFilterRole] = useState<string>('all')
+  const [filterLocation, setFilterLocation] = useState<string>('all')
+  const [filterBeo, setFilterBeo] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+
+  const filtered = useMemo(() => {
+    let result = [...users]
+
+    // Filtro por texto (email, nombre, departamento)
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase()
+      result = result.filter(
+        (u) =>
+          (u.email ?? '').toLowerCase().includes(search) ||
+          (u.full_name ?? '').toLowerCase().includes(search) ||
+          (u.department ?? '').toLowerCase().includes(search)
+      )
+    }
+
+    // Filtro por rol
+    if (filterRole !== 'all') {
+      result = result.filter((u) => u.role === filterRole)
+    }
+
+    // Filtro por ubicación
+    if (filterLocation !== 'all') {
+      result = result.filter((u) => u.location_id === filterLocation)
+    }
+
+    // Filtro por acceso BEO
+    if (filterBeo === 'yes') {
+      result = result.filter((u) => u.can_view_beo)
+    } else if (filterBeo === 'no') {
+      result = result.filter((u) => !u.can_view_beo)
+    }
+
+    // Filtro por estado
+    if (filterStatus === 'active') {
+      result = result.filter((u) => isActive(u))
+    } else if (filterStatus === 'inactive') {
+      result = result.filter((u) => !isActive(u))
+    }
+
+    return result
+  }, [users, searchText, filterRole, filterLocation, filterBeo, filterStatus])
 
   const sorted = useMemo(() => {
-    return [...users].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const aKey = (a.email ?? '').toLowerCase()
       const bKey = (b.email ?? '').toLowerCase()
       return aKey.localeCompare(bKey)
     })
-  }, [users])
+  }, [filtered])
 
   async function load() {
     setError(null)
@@ -100,6 +152,7 @@ export default function UserList() {
     setEditBuilding(u.building ?? '')
     setEditFloor(u.floor ?? '')
     setEditLocationId(u.location_id ?? '')
+    setEditCanViewBeo(u.can_view_beo ?? false)
   }
 
   async function saveEdit(userId: string) {
@@ -118,6 +171,7 @@ export default function UserList() {
           building: editBuilding.trim(),
           floor: editFloor.trim(),
           location_id: editLocationId || null,
+          can_view_beo: editCanViewBeo,
         }),
       })
       const text = await res.text()
@@ -184,7 +238,7 @@ export default function UserList() {
   }
 
   async function sendReset(u: UserRow) {
-    if (!confirm(`¿Generar link de recuperación para ${u.email ?? u.id}?`)) return
+    if (!confirm(`¿Generar contraseña temporal para ${u.email ?? u.id}?`)) return
     setError(null)
     setBusy(true)
     try {
@@ -195,32 +249,51 @@ export default function UserList() {
         return
       }
 
-      let actionLink: string | null = null
+      let temporaryPassword: string | null = null
       let sent = false
+      let message = ''
       try {
         const parsed = JSON.parse(text)
-        actionLink = parsed?.actionLink ?? null
+        temporaryPassword = parsed?.temporaryPassword ?? null
         sent = Boolean(parsed?.sent)
+        message = parsed?.message ?? ''
       } catch {
         // ignore
       }
 
       if (sent) {
-        alert('Correo de recuperación enviado.')
+        alert(`✅ ${message}\n\nLa contraseña temporal ha sido enviada al correo del usuario.`)
         return
       }
 
-      if (!actionLink) {
-        setError('No se pudo obtener el link de recuperación.')
+      if (!temporaryPassword) {
+        setError('No se pudo generar la contraseña temporal.')
         return
       }
+
+      // Mostrar contraseña temporal en un dialog mejorado
+      const instructions = [
+        `🔐 CONTRASEÑA TEMPORAL GENERADA`,
+        ``,
+        `Usuario: ${u.email}`,
+        `Contraseña: ${temporaryPassword}`,
+        ``,
+        `⚠️ IMPORTANTE:`,
+        `- Entrega esta contraseña al usuario de forma segura`,
+        `- Recomienda al usuario cambiarla después de iniciar sesión`,
+        `- El usuario NO podrá recuperar esta contraseña después de cerrar este mensaje`,
+        ``,
+        `✅ La contraseña ha sido copiada al portapapeles`,
+      ].join('\n')
 
       if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(actionLink)
-        alert('Link copiado al portapapeles.')
+        await navigator.clipboard.writeText(temporaryPassword)
+        alert(instructions)
       } else {
-        prompt('Copia el link de recuperación:', actionLink)
+        prompt('⚠️ COPIA ESTA CONTRASEÑA TEMPORAL:\n\n(El usuario debe cambiarla en su primer inicio de sesión)', temporaryPassword)
       }
+
+      await load()
     } catch (e: any) {
       setError(e?.message ?? 'Error inesperado')
     } finally {
@@ -230,7 +303,7 @@ export default function UserList() {
 
   return (
     <div className="card overflow-hidden">
-      <div className="p-4 pb-0">
+      <div className="p-4 pb-0 space-y-3">
         <div className="flex items-center justify-between gap-2.5">
           <div>
             <div className="text-sm font-semibold text-gray-900">Listado de usuarios</div>
@@ -239,6 +312,55 @@ export default function UserList() {
           <button type="button" className="btn btn-secondary" onClick={load} disabled={busy}>
             {busy ? 'Actualizando…' : 'Actualizar'}
           </button>
+        </div>
+
+        {/* Filtros */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          <div className="lg:col-span-2">
+            <input
+              type="text"
+              placeholder="Buscar por email, nombre o departamento..."
+              className="input text-xs"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </div>
+          <div>
+            <select className="select text-xs" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+              <option value="all">Todos los roles</option>
+              {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <select className="select text-xs" value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)}>
+              <option value="all">Todas las sedes</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <select className="select text-xs flex-1" value={filterBeo} onChange={(e) => setFilterBeo(e.target.value)}>
+              <option value="all">BEO: Todos</option>
+              <option value="yes">Con BEO</option>
+              <option value="no">Sin BEO</option>
+            </select>
+            <select className="select text-xs flex-1" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <option value="all">Estado: Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="text-[10px] text-gray-500">
+          Mostrando {sorted.length} de {users.length} usuarios
         </div>
 
         {error ? (
@@ -254,6 +376,7 @@ export default function UserList() {
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Nombre</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Ciudad/Empresa</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Rol</th>
+              <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Acceso BEO</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Estado</th>
               <th className="px-3 py-2 font-semibold uppercase tracking-wider text-[10px]">Acciones</th>
             </tr>
@@ -263,30 +386,18 @@ export default function UserList() {
               const active = isActive(u)
               const editing = editingId === u.id
               return (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-gray-900 text-xs">{u.email ?? '—'}</div>
-                  </td>
+                <Fragment key={u.id}>
+                  <tr className={editing ? 'bg-blue-50' : 'hover:bg-gray-50'}>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-gray-900 text-xs">{u.email ?? '—'}</div>
+                    </td>
 
-                  <td className="px-3 py-2">
-                    {editing ? (
-                      <input className="input text-xs" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nombre completo" />
-                    ) : (
+                    <td className="px-3 py-2">
                       <div className="text-gray-900 text-xs">{u.full_name || '—'}</div>
-                    )}
-                  </td>
+                      {u.department && <div className="text-[10px] text-gray-500">{u.department}</div>}
+                    </td>
 
-                  <td className="px-3 py-2">
-                    {editing ? (
-                      <select className="select text-xs" value={editLocationId} onChange={(e) => setEditLocationId(e.target.value)}>
-                        <option value="">Sin asignar</option>
-                        {locations.map((loc) => (
-                          <option key={loc.id} value={loc.id}>
-                            {loc.name} ({loc.code})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
+                    <td className="px-3 py-2">
                       <div className="text-gray-900 text-xs">
                         {u.location_name ? (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-medium">
@@ -296,77 +407,220 @@ export default function UserList() {
                           <span className="text-gray-400">Sin asignar</span>
                         )}
                       </div>
-                    )}
-                  </td>
+                    </td>
 
-                  <td className="px-3 py-2">
-                    {editing ? (
-                      <select className="select" value={editRole} onChange={(e) => setEditRole(e.target.value as Role)}>
-                        {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
-                          <option key={r} value={r}>
-                            {ROLE_LABEL[r]}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
+                    <td className="px-3 py-2">
                       <div className="text-gray-900 text-xs">{u.role ? ROLE_LABEL[u.role] : '—'}</div>
-                    )}
-                  </td>
+                    </td>
 
-                  <td className="px-3 py-2">
-                    <span
-                      className={
-                        active
-                          ? 'inline-flex rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[10px] font-semibold text-green-700'
-                          : 'inline-flex rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700'
-                      }
-                    >
-                      {active ? 'Activo' : 'Desactivado'}
-                    </span>
-                  </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center">
+                        {u.can_view_beo ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 border border-purple-300">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            BEO
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-[10px]">—</span>
+                        )}
+                      </div>
+                    </td>
 
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {editing ? (
-                        <>
-                          <button className="btn btn-primary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => saveEdit(u.id)}>
-                            Guardar
-                          </button>
-                          <button
-                            className="btn btn-secondary text-[11px] px-2 py-1"
-                            type="button"
-                            disabled={busy}
-                            onClick={() => setEditingId(null)}
-                          >
-                            Cancelar
-                          </button>
-                        </>
-                      ) : (
-                        <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => beginEdit(u)}>
-                          Editar
-                        </button>
-                      )}
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          active
+                            ? 'inline-flex rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[10px] font-semibold text-green-700'
+                            : 'inline-flex rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700'
+                        }
+                      >
+                        {active ? 'Activo' : 'Desactivado'}
+                      </span>
+                    </td>
 
-                      <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => toggleActive(u)}>
-                        {active ? 'Desactivar' : 'Activar'}
-                      </button>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {!editing && (
+                          <>
+                            <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => beginEdit(u)}>
+                              Editar
+                            </button>
 
-                      <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => sendReset(u)}>
-                        Reset
-                      </button>
+                            <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => toggleActive(u)}>
+                              {active ? 'Desactivar' : 'Activar'}
+                            </button>
 
-                      <button className="btn btn-danger text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => deleteUser(u)}>
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                            <button className="btn btn-secondary text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => sendReset(u)}>
+                              Reset
+                            </button>
+
+                            <button className="btn btn-danger text-[11px] px-2 py-1" type="button" disabled={busy} onClick={() => deleteUser(u)}>
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Fila expandida para edición */}
+                  {editing && (
+                    <tr key={`${u.id}-edit`} className="bg-white border-l-4 border-blue-500">
+                      <td colSpan={7} className="px-3 py-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editando: {u.email}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Nombre completo</label>
+                              <input className="input text-xs" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nombre Apellido" />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Departamento</label>
+                              <DepartmentSelector
+                                value={editDepartment}
+                                onChange={setEditDepartment}
+                                placeholder="Selecciona un departamento"
+                                allowCreate={true}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Teléfono / Ext</label>
+                              <input className="input text-xs" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="555-1234 ext. 100" />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Puesto</label>
+                              <PositionSelector
+                                value={editPosition}
+                                onChange={setEditPosition}
+                                placeholder="Selecciona un puesto"
+                                allowCreate={true}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Edificio / Sede</label>
+                              <input className="input text-xs" value={editBuilding} onChange={(e) => setEditBuilding(e.target.value)} placeholder="Edificio A, Matriz..." />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Piso</label>
+                              <input className="input text-xs" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder="3, PB..." />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Ciudad/Empresa</label>
+                              <select className="select text-xs" value={editLocationId} onChange={(e) => setEditLocationId(e.target.value)}>
+                                <option value="">Sin asignar</option>
+                                {locations.map((loc) => (
+                                  <option key={loc.id} value={loc.id}>
+                                    {loc.name} ({loc.code})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Rol</label>
+                              <select className="select text-xs" value={editRole} onChange={(e) => setEditRole(e.target.value as Role)}>
+                                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+                                  <option key={r} value={r}>
+                                    {ROLE_LABEL[r]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Acceso BEO</label>
+                              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                                <input
+                                  type="checkbox"
+                                  checked={editCanViewBeo}
+                                  onChange={(e) => setEditCanViewBeo(e.target.checked)}
+                                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500"
+                                />
+                                <span className="text-xs text-gray-700 flex items-center gap-1">
+                                  <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  Acceso a Eventos BEO
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-200">
+                            <div className="flex gap-2">
+                              <button 
+                                className="btn btn-secondary text-xs px-3 py-1.5" 
+                                type="button" 
+                                disabled={busy} 
+                                onClick={() => {
+                                  setEditingId(null)
+                                  toggleActive(u)
+                                }}
+                              >
+                                {active ? 'Desactivar usuario' : 'Activar usuario'}
+                              </button>
+                              <button 
+                                className="btn btn-secondary text-xs px-3 py-1.5" 
+                                type="button" 
+                                disabled={busy} 
+                                onClick={() => {
+                                  setEditingId(null)
+                                  sendReset(u)
+                                }}
+                              >
+                                Enviar reset password
+                              </button>
+                              <button 
+                                className="btn btn-danger text-xs px-3 py-1.5" 
+                                type="button" 
+                                disabled={busy} 
+                                onClick={() => {
+                                  setEditingId(null)
+                                  deleteUser(u)
+                                }}
+                              >
+                                Eliminar usuario
+                              </button>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                className="btn btn-secondary text-xs px-3 py-1.5"
+                                type="button"
+                                disabled={busy}
+                                onClick={() => setEditingId(null)}
+                              >
+                                Cancelar
+                              </button>
+                              <button className="btn btn-primary text-xs px-3 py-1.5" type="button" disabled={busy} onClick={() => saveEdit(u.id)}>
+                                {busy ? 'Guardando...' : 'Guardar cambios'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               )
             })}
 
             {sorted.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-gray-500 text-xs" colSpan={6}>
+                <td className="px-3 py-8 text-center text-gray-500 text-xs" colSpan={7}>
                   {busy ? 'Cargando…' : 'No hay usuarios'}
                 </td>
               </tr>

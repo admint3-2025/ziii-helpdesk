@@ -3,7 +3,18 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-export default function AssetFilters() {
+type Location = {
+  id: string
+  name: string
+  code: string
+}
+
+type AssetFiltersProps = {
+  locations: Location[]
+  userRole: string
+}
+
+export default function AssetFilters({ locations, userRole }: AssetFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -11,12 +22,14 @@ export default function AssetFilters() {
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [type, setType] = useState(searchParams.get('type') || '')
   const [status, setStatus] = useState(searchParams.get('status') || '')
+  const [location, setLocation] = useState(searchParams.get('location') || '')
 
   const handleFilter = () => {
     const params = new URLSearchParams()
     if (search) params.set('search', search)
     if (type) params.set('type', type)
     if (status) params.set('status', status)
+    if (location) params.set('location', location)
     
     startTransition(() => {
       router.push(`/admin/assets?${params.toString()}`)
@@ -27,12 +40,14 @@ export default function AssetFilters() {
     setSearch('')
     setType('')
     setStatus('')
+    setLocation('')
     startTransition(() => {
       router.push('/admin/assets')
     })
   }
 
-  const hasFilters = search || type || status
+  const hasFilters = search || type || status || location
+  const isAdmin = userRole === 'admin'
 
   return (
     <div className="card shadow-sm border border-slate-200">
@@ -44,9 +59,9 @@ export default function AssetFilters() {
           <h3 className="text-sm font-semibold text-gray-900">Filtros y Búsqueda</h3>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Búsqueda */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               Buscar activo
             </label>
@@ -66,6 +81,27 @@ export default function AssetFilters() {
               />
             </div>
           </div>
+
+          {/* Sede/Ubicación */}
+          {isAdmin && locations.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Sede / Ubicación
+              </label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Todas las sedes</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.code} - {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Tipo */}
           <div>

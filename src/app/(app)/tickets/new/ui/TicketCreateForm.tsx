@@ -67,6 +67,11 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
   
   // Confirmation modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  
+  // Remote connection fields
+  const [remoteConnectionType, setRemoteConnectionType] = useState<string>('')
+  const [remoteConnectionId, setRemoteConnectionId] = useState<string>('')
+  const [remoteConnectionPassword, setRemoteConnectionPassword] = useState<string>('')
 
   const priority = useMemo(() => computePriority({ impact, urgency }), [impact, urgency])
 
@@ -194,6 +199,12 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
     e.preventDefault()
     setError(null)
     
+    // Validar que si el usuario puede crear para otros, DEBE seleccionar un solicitante
+    if (canCreateForOthers && !requesterId) {
+      setError('Debes seleccionar un usuario solicitante. Para cumplir con trazabilidad ITIL, todos los tickets deben tener un solicitante y sede asociada.')
+      return
+    }
+    
     // Mostrar modal de confirmación en lugar de crear directamente
     setShowConfirmModal(true)
   }
@@ -201,7 +212,9 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
   async function handleConfirmCreate() {
     setBusy(true)
 
-    const result = await createTicket({
+    console.log('[TicketCreateForm] 📋 Asset ID antes de enviar:', assetId)
+    
+    const ticketInput = {
       title,
       description,
       category_id: selectedCategoryId,
@@ -213,7 +226,14 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
         ? requesterId
         : undefined,
       asset_id: assetId || null,
-    })
+      remote_connection_type: remoteConnectionType || null,
+      remote_connection_id: remoteConnectionId || null,
+      remote_connection_password: remoteConnectionPassword || null,
+    }
+    
+    console.log('[TicketCreateForm] 📦 Datos completos a enviar:', JSON.stringify(ticketInput, null, 2))
+    
+    const result = await createTicket(ticketInput)
 
     if (result.error) {
       setBusy(false)
@@ -519,20 +539,25 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
                   <div className="text-xs">No se encontraron usuarios en tu ubicación. Contacta al administrador.</div>
                 </div>
               ) : (
-                <select
-                  className="select w-full text-sm"
-                  value={requesterId}
-                  onChange={(e) => setRequesterId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Seleccionar usuario --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name || u.id.substring(0, 8)}
-                      {u.id === currentUserId ? ' (Yo)' : ''}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <select
+                    className="select w-full text-sm"
+                    value={requesterId}
+                    onChange={(e) => setRequesterId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Seleccionar usuario solicitante (obligatorio) --</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name || u.id.substring(0, 8)}
+                        {u.id === currentUserId ? ' (Yo)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-amber-700">
+                    ⚠️ Campo obligatorio: Todo ticket debe tener un solicitante con sede asignada para cumplir con trazabilidad ITIL.
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -557,6 +582,7 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
             <div className="card-body">
               <select
                 className="select w-full text-sm"
+                name="assetId"
                 value={assetId}
                 onChange={(e) => setAssetId(e.target.value)}
               >
@@ -674,6 +700,108 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
                   Calculada automáticamente según impacto y urgencia
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card de conexión remota */}
+        <div className="card shadow-lg border-0">
+          <div className="card-body">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-cyan-100 rounded-lg">
+                <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Conexión remota</h3>
+                <p className="text-xs text-gray-600">Información para asistencia remota (opcional)</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Tipo de conexión */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">
+                  Tipo de conexión
+                </label>
+                <select
+                  className="select text-sm"
+                  value={remoteConnectionType}
+                  onChange={(e) => {
+                    setRemoteConnectionType(e.target.value)
+                    // Limpiar campos si se deselecciona
+                    if (!e.target.value) {
+                      setRemoteConnectionId('')
+                      setRemoteConnectionPassword('')
+                    }
+                  }}
+                >
+                  <option value="">No requiere conexión remota</option>
+                  <option value="rustdesk">🖥️ RustDesk</option>
+                  <option value="anydesk">🔵 AnyDesk</option>
+                  <option value="teamviewer">🔴 TeamViewer</option>
+                  <option value="chrome_remote">🌐 Chrome Remote Desktop</option>
+                  <option value="otros">⚙️ Otros</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Selecciona el software de conexión remota que tienes instalado
+                </p>
+              </div>
+
+              {/* ID de conexión - solo si se seleccionó un tipo */}
+              {remoteConnectionType && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">
+                      ID de conexión
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="input text-sm"
+                      value={remoteConnectionId}
+                      onChange={(e) => setRemoteConnectionId(e.target.value)}
+                      placeholder="Ej: 123 456 789"
+                      required={!!remoteConnectionType}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Proporciona el ID o código de acceso remoto
+                    </p>
+                  </div>
+
+                  {/* Password - opcional */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">
+                      Password (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      className="input text-sm"
+                      value={remoteConnectionPassword}
+                      onChange={(e) => setRemoteConnectionPassword(e.target.value)}
+                      placeholder="Si aplica, ingresa el password temporal"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Solo si tu software requiere password para conectar
+                    </p>
+                  </div>
+
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 flex items-start gap-2">
+                    <svg className="w-5 h-5 text-cyan-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-xs text-cyan-800">
+                      <p className="font-semibold mb-1">Esta información permite al técnico:</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-cyan-700">
+                        <li>Conectarse de forma remota para diagnóstico</li>
+                        <li>Resolver el problema sin necesidad de visita presencial</li>
+                        <li>Agilizar el tiempo de respuesta y solución</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -839,7 +967,10 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
           priority,
           requesterName: getRequesterName(),
           assetInfo: getAssetInfo(),
-          attachmentsCount: attachments.length
+          attachmentsCount: attachments.length,
+          remoteConnectionType,
+          remoteConnectionId,
+          remoteConnectionPassword,
         }}
       />
     </>

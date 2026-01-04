@@ -28,6 +28,14 @@ const PRIORITY_LABELS: Record<number, string> = {
   5: 'Urgente',
 }
 
+type AssetEmailInfo = {
+  assetTag: string
+  assetType?: string | null
+  brand?: string | null
+  model?: string | null
+  serialNumber?: string | null
+}
+
 type TicketNotificationData = {
   ticketId: string
   ticketNumber: string
@@ -77,6 +85,7 @@ export async function notifyTicketCreated(data: TicketNotificationData) {
       .single()
 
     const requesterName = requesterProfile?.full_name || requester.user.email
+    const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const ticketUrl = `${baseUrl}/tickets/${data.ticketId}`
 
@@ -89,6 +98,11 @@ export async function notifyTicketCreated(data: TicketNotificationData) {
       category: data.category || 'Sin categoría',
       ticketUrl,
       requesterName,
+       assetTag: assetInfo?.assetTag,
+       assetType: assetInfo?.assetType || undefined,
+       assetBrand: assetInfo?.brand || undefined,
+       assetModel: assetInfo?.model || undefined,
+       assetSerial: assetInfo?.serialNumber || undefined,
     })
 
     console.log('[notifyTicketCreated] Enviando email a:', requester.user.email)
@@ -109,6 +123,44 @@ export async function notifyTicketCreated(data: TicketNotificationData) {
   }
 }
 
+async function fetchTicketAssetInfo(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  ticketId: string,
+): Promise<AssetEmailInfo | null> {
+  try {
+    const { data: ticket } = await supabase
+      .from('tickets')
+      .select('asset_id')
+      .eq('id', ticketId)
+      .single()
+
+    if (!ticket?.asset_id) return null
+
+    const { data: asset, error } = await supabase
+      .from('assets')
+      .select('asset_tag, asset_type, brand, model, serial_number')
+      .eq('id', ticket.asset_id)
+      .single()
+
+    if (error || !asset) {
+      console.error('[ticket-notifications] Error obteniendo activo para ticket', ticketId, error)
+      return null
+    }
+
+    if (!asset.asset_tag) return null
+
+    return {
+      assetTag: asset.asset_tag,
+      assetType: asset.asset_type,
+      brand: asset.brand,
+      model: asset.model,
+      serialNumber: asset.serial_number,
+    }
+  } catch (err) {
+    console.error('[ticket-notifications] Excepción obteniendo activo para ticket', ticketId, err)
+    return null
+  }
+}
 /**
  * Notifica al agente asignado y al solicitante sobre la asignación
  */
@@ -143,6 +195,7 @@ export async function notifyTicketAssigned(data: TicketNotificationData) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const ticketUrl = `${baseUrl}/tickets/${data.ticketId}`
+    const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
 
     const template = ticketAssignedEmailTemplate({
       ticketNumber: data.ticketNumber,
@@ -151,6 +204,11 @@ export async function notifyTicketAssigned(data: TicketNotificationData) {
       assignedTo: agentName,
       assignedBy,
       ticketUrl,
+      assetTag: assetInfo?.assetTag,
+      assetType: assetInfo?.assetType || undefined,
+      assetBrand: assetInfo?.brand || undefined,
+      assetModel: assetInfo?.model || undefined,
+      assetSerial: assetInfo?.serialNumber || undefined,
     })
 
     // Enviar notificación al agente
@@ -182,6 +240,11 @@ export async function notifyTicketAssigned(data: TicketNotificationData) {
         assignedAgentName: agentName,
         ticketUrl,
         requesterName,
+        assetTag: assetInfo?.assetTag,
+        assetType: assetInfo?.assetType || undefined,
+        assetBrand: assetInfo?.brand || undefined,
+        assetModel: assetInfo?.model || undefined,
+        assetSerial: assetInfo?.serialNumber || undefined,
       })
 
       await sendMail({
@@ -209,6 +272,7 @@ export async function notifyTicketStatusChanged(data: TicketNotificationData) {
     
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const ticketUrl = `${baseUrl}/tickets/${data.ticketId}`
+    const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
 
     // Obtener quien hizo el cambio
     let changedBy = 'Sistema'
@@ -240,6 +304,11 @@ export async function notifyTicketStatusChanged(data: TicketNotificationData) {
         changedBy,
         ticketUrl,
         recipientName: requesterName,
+        assetTag: assetInfo?.assetTag,
+        assetType: assetInfo?.assetType || undefined,
+        assetBrand: assetInfo?.brand || undefined,
+        assetModel: assetInfo?.model || undefined,
+        assetSerial: assetInfo?.serialNumber || undefined,
       })
 
       await sendMail({
@@ -272,6 +341,11 @@ export async function notifyTicketStatusChanged(data: TicketNotificationData) {
           changedBy,
           ticketUrl,
           recipientName: agentName,
+          assetTag: assetInfo?.assetTag,
+          assetType: assetInfo?.assetType || undefined,
+          assetBrand: assetInfo?.brand || undefined,
+          assetModel: assetInfo?.model || undefined,
+          assetSerial: assetInfo?.serialNumber || undefined,
         })
 
         await sendMail({
@@ -324,6 +398,7 @@ export async function notifyTicketClosed(data: TicketNotificationData) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const ticketUrl = `${baseUrl}/tickets/${data.ticketId}`
+    const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
 
     const template = ticketClosedEmailTemplate({
       ticketNumber: data.ticketNumber,
@@ -332,6 +407,11 @@ export async function notifyTicketClosed(data: TicketNotificationData) {
       ticketUrl,
       recipientName: requesterName,
       resolution: data.resolution,
+      assetTag: assetInfo?.assetTag,
+      assetType: assetInfo?.assetType || undefined,
+      assetBrand: assetInfo?.brand || undefined,
+      assetModel: assetInfo?.model || undefined,
+      assetSerial: assetInfo?.serialNumber || undefined,
     })
 
     await sendMail({
@@ -358,6 +438,9 @@ export async function notifyTicketEscalated(data: TicketNotificationData) {
     
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const ticketUrl = `${baseUrl}/tickets/${data.ticketId}`
+
+    // Obtener información del activo asociado
+    const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
 
     // Obtener quien escaló
     let escalatedBy = 'Sistema'
@@ -389,6 +472,11 @@ export async function notifyTicketEscalated(data: TicketNotificationData) {
         specialistName,
         ticketUrl,
         isSpecialist: true,
+        assetTag: assetInfo?.assetTag,
+        assetType: assetInfo?.assetType || undefined,
+        assetBrand: assetInfo?.brand || undefined,
+        assetModel: assetInfo?.model || undefined,
+        assetSerial: assetInfo?.serialNumber || undefined,
       })
 
       await sendMail({
@@ -428,6 +516,11 @@ export async function notifyTicketEscalated(data: TicketNotificationData) {
         specialistName,
         ticketUrl,
         isSpecialist: false,
+        assetTag: assetInfo?.assetTag,
+        assetType: assetInfo?.assetType || undefined,
+        assetBrand: assetInfo?.brand || undefined,
+        assetModel: assetInfo?.model || undefined,
+        assetSerial: assetInfo?.serialNumber || undefined,
       })
 
       await sendMail({
@@ -523,6 +616,7 @@ export async function notifyLocationStaff(data: TicketNotificationData) {
     // Enviar notificación a cada miembro del personal
     for (const staff of staffProfiles) {
       try {
+        const assetInfo = await fetchTicketAssetInfo(supabase, data.ticketId)
         // Obtener email del auth
         const { data: authUser } = await supabase.auth.admin.getUserById(staff.id)
         
@@ -548,6 +642,11 @@ export async function notifyLocationStaff(data: TicketNotificationData) {
           isUpdate,
           oldStatus: data.oldStatus ? STATUS_LABELS[data.oldStatus] : undefined,
           newStatus: data.newStatus ? STATUS_LABELS[data.newStatus] : undefined,
+          assetTag: assetInfo?.assetTag,
+          assetType: assetInfo?.assetType || undefined,
+          assetBrand: assetInfo?.brand || undefined,
+          assetModel: assetInfo?.model || undefined,
+          assetSerial: assetInfo?.serialNumber || undefined,
         })
         
         await sendMail({

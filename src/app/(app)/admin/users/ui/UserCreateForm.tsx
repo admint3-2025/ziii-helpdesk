@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import DepartmentSelector from '@/components/DepartmentSelector'
+import PositionSelector from '@/components/PositionSelector'
 
 const ROLES = [
   { value: 'requester', label: 'Usuario' },
@@ -37,6 +39,7 @@ export default function UserCreateForm() {
   const [position, setPosition] = useState('')
   const [locationId, setLocationId] = useState<string>('')
   const [locations, setLocations] = useState<Location[]>([])
+  const [canViewBeo, setCanViewBeo] = useState(false)
   const [invite, setInvite] = useState(true)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -87,6 +90,7 @@ export default function UserCreateForm() {
           floor: floor.trim(),
           position: position.trim(),
           location_id: locationId || null,
+          can_view_beo: canViewBeo,
           invite,
           ...(invite ? {} : { password }),
         }),
@@ -109,6 +113,7 @@ export default function UserCreateForm() {
       setFloor('')
       setPosition('')
       setLocationId('')
+      setCanViewBeo(false)
       setInvite(true)
       setPassword('')
     } catch (e: any) {
@@ -153,13 +158,14 @@ export default function UserCreateForm() {
 
           <div>
             <label className="block text-[11px] font-medium text-gray-700">Departamento</label>
-            <input
-              className="input mt-1"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              placeholder="TI, RRHH, Ventas..."
-              autoComplete="off"
-            />
+            <div className="mt-1">
+              <DepartmentSelector
+                value={department}
+                onChange={setDepartment}
+                placeholder="Selecciona un departamento"
+                allowCreate={true}
+              />
+            </div>
           </div>
 
           <div>
@@ -175,13 +181,14 @@ export default function UserCreateForm() {
 
           <div>
             <label className="block text-[11px] font-medium text-gray-700">Puesto</label>
-            <input
-              className="input mt-1"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              placeholder="Analista, Gerente..."
-              autoComplete="off"
-            />
+            <div className="mt-1">
+              <PositionSelector
+                value={position}
+                onChange={setPosition}
+                placeholder="Selecciona un puesto"
+                allowCreate={true}
+              />
+            </div>
           </div>
 
           <div>
@@ -227,6 +234,23 @@ export default function UserCreateForm() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="flex items-end">
+            <label className="flex items-center gap-1.5 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500"
+                checked={canViewBeo}
+                onChange={(e) => setCanViewBeo(e.target.checked)}
+              />
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Acceso a BEO (Eventos)
+              </span>
+            </label>
           </div>
 
           <div className="flex items-end">

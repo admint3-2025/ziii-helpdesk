@@ -7,6 +7,8 @@ import TrendChart from './ui/TrendChart'
 import RecentTickets from './ui/RecentTickets'
 import AgingMetrics from './ui/AgingMetrics'
 import InteractiveKPI from './ui/InteractiveKPI'
+import AssignedAssets from './ui/AssignedAssets'
+import LocationStatsTable from './ui/LocationStatsTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,11 +88,16 @@ export default async function DashboardPage() {
     count: priorityCounts[priority] || 0,
   }))
 
-  // Tendencia últimos 7 días
+  // Tendencia últimos 7 días (incluyendo hoy)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date()
+    date.setHours(0, 0, 0, 0) // Normalizar a medianoche para evitar problemas de zona horaria
     date.setDate(date.getDate() - (6 - i))
-    return date.toISOString().split('T')[0]
+    // Retornar formato YYYY-MM-DD en zona horaria local
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   })
 
   const { data: trendData, error: trendError } = await applyFilter(
@@ -152,42 +159,165 @@ export default async function DashboardPage() {
     })
     .sort((a, b) => b.avgDays - a.avgDays)
 
+  // Estadísticas por sede (solo para admin/supervisor; RLS protege el resto)
+  const { data: { user } } = await supabase.auth.getUser()
+  let locationStats: any[] = []
+  let isAdminOrSupervisor = false
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, location_id')
+      .eq('id', user.id)
+      .single()
+
+    isAdminOrSupervisor = profile?.role === 'admin' || profile?.role === 'supervisor'
+
+    if (isAdminOrSupervisor) {
+      // Si es admin, ve todas las sedes. Si es supervisor, solo sus sedes asignadas
+      let statsQuery = supabase
+        .from('location_incident_stats')
+        .select('*')
+      
+      let shouldExecuteQuery = true
+      
+      if (profile?.role === 'supervisor') {
+        // Obtener las sedes asignadas al supervisor
+        const { data: userLocs, error: userLocsError } = await supabase
+          .from('user_locations')
+          .select('location_id')
+          .eq('user_id', user.id)
+        
+        const locationIds = userLocs?.map(ul => ul.location_id).filter(Boolean) || []
+        
+        // Incluir también la location_id del perfil si existe
+        if (profile.location_id && !locationIds.includes(profile.location_id)) {
+          locationIds.push(profile.location_id)
+        }
+        
+        // DEBUG: Log para verificar filtrado
+        console.log('[DASHBOARD] Supervisor location filter:', {
+          userId: user.id,
+          role: profile.role,
+          profileLocationId: profile.location_id,
+          userLocations: userLocs,
+          finalLocationIds: locationIds,
+          error: userLocsError
+        })
+        
+        // Filtrar por las sedes del supervisor
+        if (locationIds.length > 0) {
+          statsQuery = statsQuery.in('location_id', locationIds)
+        } else {
+          // Si no tiene sedes asignadas, no mostrar nada
+          shouldExecuteQuery = false
+          locationStats = []
+        }
+      }
+
+      if (shouldExecuteQuery) {
+        const { data: statsData, error: statsError } = await statsQuery
+
+        if (statsError) {
+          dashboardErrors.push(statsError.message)
+        } else {
+          locationStats = statsData ?? []
+        }
+      }
+    }
+  }
+
+  // Activos asignados al usuario actual
+  let assignedAssets: any[] = []
+
+  if (user) {
+    const { data: assetsData, error: assetsError } = await supabase
+      .from('assets')
+      .select(`
+        id,
+        asset_tag,
+        asset_type,
+        status,
+        asset_location:locations!location_id(code,name)
+      `)
+      .eq('assigned_to', user.id)
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+      .limit(5)
+
+    if (assetsError) {
+      dashboardErrors.push(assetsError.message)
+    } else {
+      assignedAssets = assetsData ?? []
+    }
+  }
+
   return (
     <main className="min-h-screen space-y-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header moderno */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 shadow-lg">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl -ml-32 -mb-32"></div>
+        {/* Header del Dashboard - Service Desk */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 shadow-2xl border border-slate-700/50">
+          {/* Patrón de fondo técnico */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 2px 2px, rgb(147 197 253) 1px, transparent 0)`,
+              backgroundSize: '32px 32px'
+            }}></div>
+          </div>
           
-          <div className="relative z-10 px-6 py-4">
+          {/* Elementos decorativos */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 px-8 py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-md">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+              <div className="flex items-center gap-4">
+                {/* Icono principal */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-blue-500 rounded-xl blur-md opacity-50"></div>
+                  <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 border border-blue-400/30 flex items-center justify-center shadow-xl">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                  </div>
                 </div>
+                
                 <div>
-                  <h1 className="text-xl font-bold text-white">Dashboard</h1>
-                  <p className="text-blue-100 text-xs">KPIs operativos y métricas en tiempo real</p>
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Service Desk Dashboard</h1>
+                  <p className="text-slate-300 text-sm mt-0.5 flex items-center gap-2">
+                    <span className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Monitoreo en tiempo real
+                    </span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-400">ITIL v4 Compliant</span>
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              
+              <div className="flex items-center gap-3">
+                {/* Botón principal */}
                 <a
                   href="/tickets/new"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                  className="group relative flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-sm transition-all shadow-lg hover:shadow-xl hover:shadow-blue-500/25 hover:scale-[1.02]"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg className="w-4 h-4 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                   </svg>
-                  Nuevo Ticket
+                  <span>Crear Ticket</span>
                 </a>
-                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-white font-medium">En vivo</span>
+                
+                {/* Indicador de estado */}
+                <div className="hidden lg:flex items-center gap-2.5 px-4 py-2.5 bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <div className="absolute inset-0 w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+                  </div>
+                  <span className="text-xs text-slate-300 font-medium">Sistema Operativo</span>
                 </div>
               </div>
             </div>
@@ -203,36 +333,39 @@ export default async function DashboardPage() {
         </div>
       ) : null}
 
-      {/* KPIs principales */}
+      {/* KPIs principales - Estilo técnico profesional */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-1 w-1 rounded-full bg-blue-600"></div>
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Indicadores Principales</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="h-1 w-1 rounded-full bg-blue-600"></div>
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Métricas Operativas</h2>
+          </div>
+          <div className="text-xs text-gray-500 font-medium">Actualización en tiempo real</div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <InteractiveKPI
-          label="Tickets Abiertos"
+          label="Tickets Activos"
           value={abiertos}
           total={total}
           icon="open"
           color="blue"
-          description="Tickets activos que requieren atención: Nuevos, Asignados, En Progreso, Requieren Info, Esperando Tercero y Resueltos pendientes de cierre"
+          description="Incidentes y solicitudes en proceso: Nuevos, Asignados, En Progreso, Requieren Información, Esperando Terceros y Pendientes de Cierre"
         />
         <InteractiveKPI
-          label="Tickets Cerrados"
+          label="Cerrados"
           value={cerrados}
           total={total}
           icon="closed"
           color="green"
-          description="Tickets resueltos y cerrados satisfactoriamente por el equipo de soporte"
+          description="Tickets resueltos satisfactoriamente y cerrados por el equipo de soporte técnico"
         />
         <InteractiveKPI
-          label="Escalados N2"
+          label="Escalado L2"
           value={escalados}
           total={total}
           icon="escalated"
           color="orange"
-          description="Tickets escalados a soporte de nivel 2 por complejidad técnica o especialización requerida"
+          description="Casos escalados a soporte nivel 2 por requerir especialización técnica avanzada"
         />
         <InteractiveKPI
           label="Asignados"
@@ -240,34 +373,60 @@ export default async function DashboardPage() {
           total={total}
           icon="assigned"
           color="purple"
-          description="Tickets con agente asignado actualmente trabajando en ellos"
+          description="Tickets con agente técnico asignado trabajando activamente en su resolución"
         />
       </div>
       </div>
 
-      {/* Gráficos y análisis */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-1 w-1 rounded-full bg-indigo-600"></div>
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Distribución y Análisis</h2>
+      {isAdminOrSupervisor && locationStats.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="h-1 w-1 rounded-full bg-emerald-600"></div>
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Estadísticas Multi-Sede</h2>
+            </div>
+            <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Todas las ubicaciones
+            </div>
+          </div>
+          <LocationStatsTable rows={locationStats} />
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-        <StatusChart data={statusChartData} />
-        <PriorityChart data={priorityChartData} />
-      </div>
-      </div>
+      )}
 
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-1 w-1 rounded-full bg-purple-600"></div>
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Métricas Detalladas</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="h-1 w-1 rounded-full bg-purple-600"></div>
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Análisis Detallado</h2>
+          </div>
+          <div className="text-xs text-gray-500 font-medium">Últimos 7 días</div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           <TrendChart data={trendCounts} />
           <AgingMetrics metrics={agingMetrics} />
+          <AssignedAssets assets={assignedAssets} />
         </div>
         <div className="mt-4">
           <RecentTickets tickets={recentTickets ?? []} />
+        </div>
+      </div>
+
+      {/* Gráficos y distribución */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="h-1 w-1 rounded-full bg-indigo-600"></div>
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Distribución y Patrones</h2>
+          </div>
+          <div className="text-xs text-gray-500 font-medium">Vista consolidada</div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <StatusChart data={statusChartData} />
+          <PriorityChart data={priorityChartData} />
         </div>
       </div>
       </div>

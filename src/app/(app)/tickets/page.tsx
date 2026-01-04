@@ -13,6 +13,16 @@ export default async function TicketsPage({
   const supabase = await createSupabaseServerClient()
   const params = await searchParams
   
+  // Obtener usuario actual para validar departamento
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = user ? await supabase
+    .from('profiles')
+    .select('department')
+    .eq('id', user.id)
+    .single() : { data: null }
+  
+  const isVentasDept = profile?.department?.toLowerCase().includes('ventas')
+  
   // Obtener filtro de ubicación
   const locationFilter = await getLocationFilter()
   
@@ -81,15 +91,28 @@ export default async function TicketsPage({
             </div>
             <p className="text-blue-100 text-xs">Gestiona y da seguimiento a todas las solicitudes de soporte</p>
           </div>
-          <Link
-            href="/tickets/new"
-            className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 font-semibold rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Crear ticket
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/tickets/new"
+              className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 font-semibold rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Crear ticket
+            </Link>
+            {isVentasDept && (
+              <Link
+                href="/tickets/beo/new"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Crear Ticket BEO
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,30 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { sendMail, getSmtpConfig } from '@/lib/email/mailer'
-import { passwordRecoveryEmailTemplate } from '@/lib/email/templates'
+import { temporaryPasswordEmailTemplate } from '@/lib/email/templates'
+
+function generateSecurePassword(length = 12): string {
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const numbers = '0123456789'
+  const symbols = '!@#$%&*'
+  const all = lowercase + uppercase + numbers + symbols
+
+  let password = ''
+  // Asegurar al menos uno de cada tipo
+  password += lowercase[Math.floor(Math.random() * lowercase.length)]
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]
+  password += numbers[Math.floor(Math.random() * numbers.length)]
+  password += symbols[Math.floor(Math.random() * symbols.length)]
+
+  // Completar con caracteres aleatorios
+  for (let i = password.length; i < length; i++) {
+    password += all[Math.floor(Math.random() * all.length)]
+  }
+
+  // Mezclar caracteres
+  return password.split('').sort(() => Math.random() - 0.5).join('')
+}
 
 export async function POST(
   request: Request,
@@ -27,26 +50,35 @@ export async function POST(
   const email = data.user?.email
   if (!email) return new Response('User has no email', { status: 400 })
 
-  const origin = new URL(request.url).origin
-  const redirectTo = `${origin}/auth/reset`
+  const { data: targetProfile } = await admin
+    .from('profiles')
+    .select('full_name')
+    .eq('id', id)
+    .single()
 
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email,
-    options: { redirectTo },
+  const fullName = targetProfile?.full_name || email
+
+  // Generar contraseña temporal segura
+  const tempPassword = generateSecurePassword(12)
+
+  // Actualizar contraseña del usuario
+  const { error: updateError } = await admin.auth.admin.updateUserById(id, {
+    password: tempPassword,
   })
-  if (linkErr) return new Response(linkErr.message, { status: 400 })
 
-  const actionLink = linkData?.properties?.action_link
-  if (!actionLink) return new Response('No action link generated', { status: 500 })
+  if (updateError) return new Response(updateError.message, { status: 400 })
 
   const smtpConfigured = Boolean(getSmtpConfig())
   let sent = false
+
   if (smtpConfigured) {
     try {
-      const tpl = passwordRecoveryEmailTemplate({
+      const tpl = temporaryPasswordEmailTemplate({
         appName: 'ZIII Helpdesk',
-        actionUrl: actionLink,
+        userName: fullName,
+        userEmail: email,
+        temporaryPassword: tempPassword,
+        loginUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       })
 
       await sendMail({
@@ -56,7 +88,8 @@ export async function POST(
         text: tpl.text,
       })
       sent = true
-    } catch {
+    } catch (e) {
+      console.error('Error sending temp password email:', e)
       sent = false
     }
   }
@@ -68,10 +101,16 @@ export async function POST(
     actor_id: user.id,
     metadata: {
       email,
-      redirectTo,
+      method: 'temporary_password',
       delivery: sent ? 'smtp' : 'manual',
     },
   })
 
-  return Response.json({ sent, actionLink: sent ? null : actionLink })
+  return Response.json({ 
+    sent, 
+    temporaryPassword: sent ? null : tempPassword,
+    message: sent 
+      ? 'Contraseña temporal enviada por correo' 
+      : 'Contraseña temporal generada (copiar manualmente)'
+  })
 }

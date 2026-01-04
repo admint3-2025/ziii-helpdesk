@@ -39,7 +39,7 @@ export async function GET() {
 
   const { data: profiles, error: profErr } = await admin
     .from('profiles')
-    .select('id,full_name,role,department,phone,building,floor,position,supervisor_id,location_id,locations(name)')
+    .select('id,full_name,role,department,phone,building,floor,position,supervisor_id,location_id,can_view_beo,locations(name)')
     .in('id', ids)
 
   if (profErr) return new Response(profErr.message, { status: 500 })
@@ -71,6 +71,7 @@ export async function GET() {
       supervisor_id: (p?.supervisor_id as any) ?? null,
       location_id: (p?.location_id as any) ?? null,
       location_name: (p?.locations as any)?.name ?? null,
+      can_view_beo: (p?.can_view_beo as any) ?? false,
     }
   })
 
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
   const floor = typeof body?.floor === 'string' ? body.floor.trim() : ''
   const position = typeof body?.position === 'string' ? body.position.trim() : ''
   const locationId = typeof body?.location_id === 'string' ? body.location_id.trim() : ''
+  const canViewBeo = Boolean(body?.can_view_beo)
   const invite = body?.invite !== false
   const password = typeof body?.password === 'string' ? body.password : null
 
@@ -148,6 +150,7 @@ export async function POST(request: Request) {
     floor: floor || null,
     position: position || null,
     location_id: locationId || null,
+    can_view_beo: canViewBeo,
   })
 
   if (upsertErr) {
