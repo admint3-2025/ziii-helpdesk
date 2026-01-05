@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   const { data: authUsers } = await adminClient.auth.admin.listUsers()
   const activeUserIds = new Set(
     (authUsers?.users ?? []).filter(u => {
-      const bannedUntil = u.banned_until
+      const bannedUntil = (u as any).banned_until
       if (!bannedUntil) return true
       return new Date(bannedUntil).getTime() <= Date.now()
     }).map(u => u.id)
