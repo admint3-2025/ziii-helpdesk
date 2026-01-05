@@ -13,10 +13,6 @@ type LocationStatsRow = {
 }
 
 export default function LocationStatsTable({ rows }: { rows: LocationStatsRow[] }) {
-  if (!rows || rows.length === 0) {
-    return null
-  }
-
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     rows[0]?.location_id ?? null
   )
@@ -31,6 +27,17 @@ export default function LocationStatsTable({ rows }: { rows: LocationStatsRow[] 
     [rows, selectedLocationId]
   )
 
+  const [sending, setSending] = useState(false)
+  const [sendMessage, setSendMessage] = useState<string | null>(null)
+
+  const [showModal, setShowModal] = useState(false)
+  const [includeResponsables, setIncludeResponsables] = useState(true)
+  const [extraEmails, setExtraEmails] = useState('')
+
+  if (!rows || rows.length === 0) {
+    return null
+  }
+
   const openPct = selected.total_tickets
     ? Math.round((selected.open_tickets / selected.total_tickets) * 100)
     : 0
@@ -38,13 +45,6 @@ export default function LocationStatsTable({ rows }: { rows: LocationStatsRow[] 
     ? Math.round((selected.closed_tickets / selected.total_tickets) * 100)
     : 0
   const otherPct = Math.max(0, 100 - openPct - closedPct)
-
-  const [sending, setSending] = useState(false)
-  const [sendMessage, setSendMessage] = useState<string | null>(null)
-
-  const [showModal, setShowModal] = useState(false)
-  const [includeResponsables, setIncludeResponsables] = useState(true)
-  const [extraEmails, setExtraEmails] = useState('')
 
   async function handleSendSummary() {
     if (!selected.location_id || sending) return
