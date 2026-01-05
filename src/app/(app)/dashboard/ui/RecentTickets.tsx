@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { StatusBadge, PriorityBadge } from '@/lib/ui/badges'
+import { formatTicketCode } from '@/lib/tickets/code'
 
 type Ticket = {
   id: string
@@ -55,7 +56,7 @@ export default function RecentTickets({ tickets }: { tickets: Ticket[] }) {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded shrink-0">
-                    #{ticket.ticket_number}
+                    {formatTicketCode({ ticket_number: ticket.ticket_number, created_at: ticket.created_at })}
                   </span>
                   <p className="text-sm font-medium text-gray-900 truncate flex-1 group-hover:text-purple-700 transition-colors">
                     {ticket.title}

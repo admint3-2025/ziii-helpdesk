@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getLocationFilter } from '@/lib/supabase/locations'
 import { getCategoryPathLabel } from '@/lib/categories/path'
-import { StatusBadge, PriorityBadge, LevelBadge } from '@/lib/ui/badges'
+import { StatusBadge } from '@/lib/ui/badges'
+import { formatTicketCode } from '@/lib/tickets/code'
 import TicketFilters from './ui/TicketFilters'
 
 export default async function TicketsPage({
@@ -29,7 +30,7 @@ export default async function TicketsPage({
   // Construir query base
   let query = supabase
     .from('tickets')
-    .select('id,ticket_number,title,status,priority,support_level,created_at,category_id,description')
+    .select('id,ticket_number,title,status,priority,support_level,created_at,category_id,description,location_id,locations(code,name)')
     .is('deleted_at', null)
 
   // Aplicar filtro de ubicación
@@ -148,7 +149,7 @@ export default async function TicketsPage({
       {/* Tabla mejorada con diseño moderno */}
       <div className="card overflow-hidden shadow-lg border-0">
         <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+		<table className="min-w-full text-sm">
           <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
             <tr>
               <th className="px-4 py-4 text-center font-semibold text-gray-700 uppercase tracking-wider text-xs">
@@ -160,8 +161,7 @@ export default async function TicketsPage({
               <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Título</th>
               <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Categoría</th>
               <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Estado</th>
-              <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Prioridad</th>
-              <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Nivel</th>
+              <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Sede</th>
               <th className="px-6 py-4 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Creado</th>
             </tr>
           </thead>
@@ -214,21 +214,19 @@ export default async function TicketsPage({
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs group-hover:bg-blue-200 transition-colors">
-                    {t.ticket_number}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2 group/link">
-                    <span className="group-hover/link:underline">{t.title}</span>
-                    <svg className="w-4 h-4 opacity-0 group-hover/link:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1.5 text-gray-700 text-xs">
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-800">
+                    {formatTicketCode({ ticket_number: t.ticket_number, created_at: t.created_at })}
+                  </td>
+        <td className="px-6 py-4">
+          <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2 group/link">
+          <span className="group-hover/link:underline">{t.title}</span>
+          <svg className="w-4 h-4 opacity-0 group-hover/link:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          </Link>
+        </td>
+        <td className="px-6 py-4">
+          <span className="inline-flex items-center gap-1.5 text-gray-700 text-xs">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
@@ -239,10 +237,14 @@ export default async function TicketsPage({
                   <StatusBadge status={t.status} />
                 </td>
                 <td className="px-6 py-4">
-                  <PriorityBadge priority={t.priority} />
-                </td>
-                <td className="px-6 py-4">
-                  <LevelBadge level={t.support_level} />
+                  <div className="inline-flex flex-col text-xs text-gray-700">
+                    <span className="font-semibold">
+                      {t.locations?.code || '—'}
+                    </span>
+                    {t.locations?.name && (
+                      <span className="text-gray-500 text-[11px]">{t.locations.name}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2 text-gray-600 text-xs">
@@ -264,7 +266,7 @@ export default async function TicketsPage({
             })}
             {tickets?.length === 0 ? (
               <tr>
-                <td className="px-6 py-16 text-center" colSpan={8}>
+					<td className="px-6 py-16 text-center" colSpan={7}>
                   <div className="flex flex-col items-center gap-3">
                     <div className="p-4 bg-gray-100 rounded-full">
                       <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -14,9 +14,13 @@ as $$
 declare
   staff_id uuid;
   requester_name text;
+  ticket_code text;
 begin
   -- Obtener nombre del solicitante
   requester_name := get_user_name(new.requester_id);
+
+  -- Código visible del ticket (fecha + secuencia, zona CDMX)
+  ticket_code := to_char(new.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(new.ticket_number::text, 4, '0');
 
   -- Notificar a supervisores, técnicos L1/L2 de la misma sede + admins (sin sede específica)
   for staff_id in
@@ -37,7 +41,7 @@ begin
         staff_id,
         'TICKET_CREATED',
         'Nuevo ticket creado',
-        format('"%s" ha creado el ticket #%s', requester_name, new.ticket_number),
+        format('"%s" ha creado el ticket %s', requester_name, ticket_code),
         new.id,
         new.ticket_number,
         new.requester_id
@@ -58,6 +62,7 @@ as $$
 declare
   status_label text;
   staff_id uuid;
+  ticket_code text;
 begin
   -- Solo si hay cambio de estado
   if new.status != old.status then
@@ -74,13 +79,16 @@ begin
       else new.status::text
     end;
 
+    -- Código visible del ticket
+    ticket_code := to_char(new.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(new.ticket_number::text, 4, '0');
+
     -- Notificar al solicitante
     insert into notifications (user_id, type, title, message, ticket_id, ticket_number)
     values (
       new.requester_id,
       'TICKET_STATUS_CHANGED',
       'Estado actualizado',
-      format('Tu ticket #%s cambió a: %s', new.ticket_number, status_label),
+      format('Tu ticket %s cambió a: %s', ticket_code, status_label),
       new.id,
       new.ticket_number
     );
@@ -92,7 +100,7 @@ begin
         new.assigned_agent_id,
         'TICKET_STATUS_CHANGED',
         'Estado actualizado',
-        format('El ticket #%s cambió a: %s', new.ticket_number, status_label),
+        format('El ticket %s cambió a: %s', ticket_code, status_label),
         new.id,
         new.ticket_number
       );
@@ -126,7 +134,7 @@ begin
             staff_id,
             'TICKET_CLOSED'::notification_type,
             'Ticket cerrado',
-            format('El ticket #%s ha sido cerrado', new.ticket_number),
+            format('El ticket %s ha sido cerrado', ticket_code),
             new.id,
             new.ticket_number
           );

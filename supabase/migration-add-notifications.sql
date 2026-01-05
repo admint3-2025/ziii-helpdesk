@@ -37,8 +37,13 @@ create index if not exists idx_notifications_is_read on notifications(is_read);
 create index if not exists idx_notifications_created_at on notifications(created_at desc);
 create index if not exists idx_notifications_user_unread on notifications(user_id, is_read) where is_read = false;
 
--- Habilitar Realtime para notificaciones
-alter publication supabase_realtime add table notifications;
+-- Habilitar Realtime para notificaciones (idempotente)
+do $$
+begin
+  alter publication supabase_realtime add table notifications;
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Función auxiliar para obtener nombre de usuario
 create or replace function get_user_name(user_id uuid)
@@ -68,9 +73,13 @@ as $$
 declare
   staff_id uuid;
   requester_name text;
+  ticket_code text;
 begin
   -- Obtener nombre del solicitante
   requester_name := get_user_name(new.requester_id);
+
+  -- Construir código de ticket con fecha + secuencia (CDMX)
+  ticket_code := to_char(new.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(new.ticket_number::text, 4, '0');
 
   -- Notificar a supervisores, técnicos L1/L2 de la misma sede + admins (sin sede específica)
   for staff_id in
@@ -91,7 +100,7 @@ begin
         staff_id,
         'TICKET_CREATED',
         'Nuevo ticket creado',
-        format('"%s" ha creado el ticket #%s', requester_name, new.ticket_number),
+        format('"%s" ha creado el ticket %s', requester_name, ticket_code),
         new.id,
         new.ticket_number,
         new.requester_id
@@ -111,11 +120,15 @@ security definer
 as $$
 declare
   assigner_name text;
+  ticket_code text;
 begin
   -- Solo si hay cambio de asignación
   if new.assigned_agent_id is not null and (old.assigned_agent_id is null or old.assigned_agent_id != new.assigned_agent_id) then
     
     assigner_name := get_user_name(coalesce(new.assigned_agent_id, new.requester_id));
+
+    -- Código visible del ticket
+    ticket_code := to_char(new.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(new.ticket_number::text, 4, '0');
 
     -- Notificar al agente asignado
     insert into notifications (user_id, type, title, message, ticket_id, ticket_number, actor_id)
@@ -123,7 +136,7 @@ begin
       new.assigned_agent_id,
       'TICKET_ASSIGNED',
       'Ticket asignado a ti',
-      format('Te han asignado el ticket #%s: "%s"', new.ticket_number, new.title),
+      format('Te han asignado el ticket %s: "%s"', ticket_code, new.title),
       new.id,
       new.ticket_number,
       new.requester_id
@@ -136,7 +149,7 @@ begin
         new.requester_id,
         'TICKET_ASSIGNED',
         'Tu ticket ha sido asignado',
-        format('Tu ticket #%s ha sido asignado a %s', new.ticket_number, get_user_name(new.assigned_agent_id)),
+        format('Tu ticket %s ha sido asignado a %s', ticket_code, get_user_name(new.assigned_agent_id)),
         new.id,
         new.ticket_number,
         new.assigned_agent_id
@@ -157,6 +170,7 @@ as $$
 declare
   status_label text;
   staff_id uuid;
+  ticket_code text;
 begin
   -- Solo si hay cambio de estado
   if new.status != old.status then
@@ -173,13 +187,16 @@ begin
       else new.status::text
     end;
 
+    -- Código visible del ticket
+    ticket_code := to_char(new.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(new.ticket_number::text, 4, '0');
+
     -- Notificar al solicitante
     insert into notifications (user_id, type, title, message, ticket_id, ticket_number)
     values (
       new.requester_id,
       'TICKET_STATUS_CHANGED',
       'Estado actualizado',
-      format('Tu ticket #%s cambió a: %s', new.ticket_number, status_label),
+      format('Tu ticket %s cambió a: %s', ticket_code, status_label),
       new.id,
       new.ticket_number
     );
@@ -191,7 +208,7 @@ begin
         new.assigned_agent_id,
         'TICKET_STATUS_CHANGED',
         'Estado actualizado',
-        format('El ticket #%s cambió a: %s', new.ticket_number, status_label),
+        format('El ticket %s cambió a: %s', ticket_code, status_label),
         new.id,
         new.ticket_number
       );
@@ -225,7 +242,7 @@ begin
             staff_id,
             'TICKET_CLOSED'::notification_type,
             'Ticket cerrado',
-            format('El ticket #%s ha sido cerrado', new.ticket_number),
+            format('El ticket %s ha sido cerrado', ticket_code),
             new.id,
             new.ticket_number
           );
@@ -247,6 +264,7 @@ as $$
 declare
   ticket_rec record;
   author_name text;
+  ticket_code text;
 begin
   -- Obtener información del ticket
   select t.*, get_user_name(new.author_id) as author
@@ -256,6 +274,9 @@ begin
 
   author_name := get_user_name(new.author_id);
 
+  -- Código visible del ticket basado en fecha de creación
+  ticket_code := to_char(ticket_rec.created_at at time zone 'America/Mexico_City', 'YYYYMMDD') || '-' || lpad(ticket_rec.ticket_number::text, 4, '0');
+
   -- Notificar al solicitante (si no es el autor del comentario)
   if ticket_rec.requester_id != new.author_id then
     insert into notifications (user_id, type, title, message, ticket_id, ticket_number, actor_id)
@@ -263,7 +284,7 @@ begin
       ticket_rec.requester_id,
       'TICKET_COMMENT_ADDED',
       'Nuevo comentario',
-      format('%s comentó en el ticket #%s', author_name, ticket_rec.ticket_number),
+      format('%s comentó en el ticket %s', author_name, ticket_code),
       ticket_rec.id,
       ticket_rec.ticket_number,
       new.author_id
@@ -279,7 +300,7 @@ begin
       ticket_rec.assigned_agent_id,
       'TICKET_COMMENT_ADDED',
       'Nuevo comentario',
-      format('%s comentó en el ticket #%s', author_name, ticket_rec.ticket_number),
+      format('%s comentó en el ticket %s', author_name, ticket_code),
       ticket_rec.id,
       ticket_rec.ticket_number,
       new.author_id
@@ -321,19 +342,34 @@ create trigger trg_notify_comment_added
 alter table notifications enable row level security;
 
 -- Los usuarios solo pueden ver sus propias notificaciones
-create policy "Users can view own notifications"
-  on notifications for select
-  using (auth.uid() = user_id);
+do $$
+begin
+  create policy "Users can view own notifications"
+    on notifications for select
+    using (auth.uid() = user_id);
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Los usuarios pueden actualizar sus propias notificaciones (marcar como leídas)
-create policy "Users can update own notifications"
-  on notifications for update
-  using (auth.uid() = user_id);
+do $$
+begin
+  create policy "Users can update own notifications"
+    on notifications for update
+    using (auth.uid() = user_id);
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Solo el sistema puede crear notificaciones
-create policy "System can insert notifications"
-  on notifications for insert
-  with check (true);
+do $$
+begin
+  create policy "System can insert notifications"
+    on notifications for insert
+    with check (true);
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Comentario
 comment on table notifications is 'Sistema de notificaciones in-app para mantener a los usuarios informados sobre cambios en tickets';
