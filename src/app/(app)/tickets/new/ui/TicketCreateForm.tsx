@@ -32,6 +32,8 @@ type Asset = {
   status: string
   assigned_to: string | null
   assigned_to_name: string | null
+  location_code?: string | null
+  location_name?: string | null
 }
 
 export default function TicketCreateForm({ categories: initialCategories }: { categories: CategoryRow[] }) {
@@ -121,10 +123,10 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
         }
       }
 
-      // Load available assets (only operational ones)
+      // Load available assets (only operational ones) with location info
       const { data: assetsData, error: assetsError } = await supabase
         .from('assets')
-        .select('id, asset_tag, asset_type, brand, model, status, assigned_to')
+        .select('id, asset_tag, asset_type, brand, model, status, assigned_to, location_id, asset_location:locations!location_id(code, name)')
         .is('deleted_at', null)
         .in('status', ['OPERATIONAL', 'MAINTENANCE'])
         .order('asset_tag', { ascending: true })
@@ -136,7 +138,7 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
       if (assetsData && assetsData.length > 0) {
         // Para cada asset con assigned_to, obtener el nombre del usuario
         const assetsWithNames = await Promise.all(
-          assetsData.map(async (asset) => {
+          assetsData.map(async (asset: any) => {
             let assigned_to_name = null
             if (asset.assigned_to) {
               const { data: profile } = await supabase
@@ -148,7 +150,9 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
             }
             return {
               ...asset,
-              assigned_to_name
+              assigned_to_name,
+              location_code: asset.asset_location?.code ?? null,
+              location_name: asset.asset_location?.name ?? null,
             }
           })
         )
@@ -594,9 +598,10 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
                 <option value="">-- Ninguno --</option>
                 {assets.map((asset) => (
                   <option key={asset.id} value={asset.id}>
-                    {asset.asset_tag} - {asset.asset_type} 
+                    {asset.asset_tag} - {asset.asset_type}
                     {asset.brand && ` ${asset.brand}`}
                     {asset.model && ` ${asset.model}`}
+                    {asset.location_code && asset.location_name && `  b7 ${asset.location_code} - ${asset.location_name}`}
                     {asset.assigned_to_name && ` | Asignado a: ${asset.assigned_to_name}`}
                     {asset.status === 'MAINTENANCE' && ' [En mantenimiento]'}
                   </option>

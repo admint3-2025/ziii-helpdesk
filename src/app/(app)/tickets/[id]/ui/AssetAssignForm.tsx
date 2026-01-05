@@ -236,10 +236,17 @@ export function AssetAssignForm({
                         </div>
                         <div className="text-xs text-gray-600">
                           {asset.asset_type.replace(/_/g, " ")}
-                          {asset.brand ? ` - ${asset.brand}` : ""}
-                          {asset.model ? ` - ${asset.model}` : ""}
-                          {asset.asset_location?.code ? ` - ${asset.asset_location.code}` : ""}
+                          {asset.brand ? ` • ${asset.brand}` : ""}
+                          {asset.model ? ` ${asset.model}` : ""}
                         </div>
+                          {asset.asset_location && (asset.asset_location.code || asset.asset_location.name) && (
+                            <div className="text-[11px] text-gray-500 mt-0.5">
+                              📍 {asset.asset_location.code && asset.asset_location.name 
+                                ? `${asset.asset_location.code} - ${asset.asset_location.name}`
+                                : asset.asset_location.code || asset.asset_location.name
+                              }
+                            </div>
+                          )}
                       </button>
                     ))}
                   </div>
