@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getLocationFilter } from '@/lib/supabase/locations'
 
 export async function GET(request: Request) {
@@ -38,8 +39,21 @@ export async function GET(request: Request) {
 
   if (error) return new Response(error.message, { status: 500 })
 
-  // Formatear respuesta
-  const formattedAgents = (agents ?? []).map((a) => ({
+  // Filtrar agentes desactivados (banned)
+  const adminClient = createSupabaseAdminClient()
+  const { data: authUsers } = await adminClient.auth.admin.listUsers()
+  const activeUserIds = new Set(
+    (authUsers?.users ?? []).filter(u => {
+      const bannedUntil = u.banned_until
+      if (!bannedUntil) return true
+      return new Date(bannedUntil).getTime() <= Date.now()
+    }).map(u => u.id)
+  )
+
+  // Formatear respuesta (solo agentes activos)
+  const formattedAgents = (agents ?? [])
+    .filter(a => activeUserIds.has(a.id))
+    .map((a) => ({
     id: a.id,
     full_name: a.full_name,
     role: a.role,

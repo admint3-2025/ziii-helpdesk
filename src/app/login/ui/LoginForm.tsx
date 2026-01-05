@@ -22,7 +22,14 @@ export default function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
     if (error) {
-      setError(error.message)
+      // Mejorar mensaje para usuarios desactivados
+      if (error.message === 'User is banned' || error.message.includes('banned')) {
+        setError('⚠️ Tu cuenta ha sido desactivada. Contacta al administrador para más información.')
+      } else if (error.message.includes('Invalid login credentials')) {
+        setError('❌ Correo o contraseña incorrectos. Verifica tus credenciales.')
+      } else {
+        setError(error.message)
+      }
       return
     }
     router.push('/dashboard')
