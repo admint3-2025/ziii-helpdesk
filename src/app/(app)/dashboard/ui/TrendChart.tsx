@@ -34,10 +34,21 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
 
   const todayCount = data.find((d) => d.date === todayKey)?.count ?? 0
   const yesterdayCount = data.find((d) => d.date === yesterdayKey)?.count ?? 0
-  const change = yesterdayCount > 0 
-    ? ((todayCount - yesterdayCount) / yesterdayCount * 100).toFixed(0)
-    : todayCount > 0 ? '+100' : '0'
-  const isPositive = todayCount >= yesterdayCount
+  const delta = todayCount - yesterdayCount
+
+  let trendLabel = 'Sin cambios'
+  let trendState: 'positive' | 'negative' | 'neutral' = 'neutral'
+
+  if (delta > 0) {
+    trendState = 'positive'
+    trendLabel = `+${delta} vs ayer`
+  } else if (delta < 0) {
+    trendState = 'negative'
+    trendLabel = `${delta} vs ayer`
+  }
+
+  const isPositive = trendState === 'positive'
+  const isNeutral = trendState === 'neutral'
 
   const points = data.map((item, index) => {
     const x = (index / (data.length - 1)) * chartWidth
@@ -65,16 +76,18 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
             </div>
           </div>
           
-          {/* Badge de cambio */}
+          {/* Badge de cambio (hoy vs ayer, sin porcentajes agresivos) */}
           <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-            isPositive 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
+            isNeutral
+              ? 'bg-gray-100 text-gray-700'
+              : isPositive 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-red-100 text-red-700'
           }`}>
-            <svg className={`w-3 h-3 ${isPositive ? '' : 'rotate-180'}`} fill="currentColor" viewBox="0 0 20 20">
+            <svg className={`w-3 h-3 ${isNeutral ? '' : isPositive ? '' : 'rotate-180'}`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
             </svg>
-            {isPositive ? '+' : ''}{change}%
+            <span>{trendLabel}</span>
           </div>
         </div>
 
