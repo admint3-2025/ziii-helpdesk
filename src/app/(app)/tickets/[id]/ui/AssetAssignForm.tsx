@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { assignTicketAssetAction } from "../actions"
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser"
 
@@ -42,6 +42,7 @@ export function AssetAssignForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const [locations, setLocations] = useState<LocationOption[]>([])
   const [loadingLocations, setLoadingLocations] = useState(false)
@@ -127,8 +128,18 @@ export function AssetAssignForm({
 
   const hasSelection = assetIdentifier.length > 0
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!hasSelection || isPending) return
+    
+    const formData = new FormData(e.currentTarget)
+    startTransition(async () => {
+      await assignTicketAssetAction(formData)
+    })
+  }
+
   return (
-    <form action={assignTicketAssetAction} className="mt-4 space-y-2">
+    <form onSubmit={handleSubmit} className="mt-4 space-y-2">
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="assetIdentifier" value={assetIdentifier} />
 
@@ -136,8 +147,8 @@ export function AssetAssignForm({
         <button type="button" className="btn btn-sm btn-primary" onClick={() => setOpen(true)}>
           Buscar
         </button>
-        <button type="submit" className="btn btn-sm btn-outline-primary" disabled={!hasSelection}>
-          Guardar
+        <button type="submit" className="btn btn-sm btn-outline-primary" disabled={!hasSelection || isPending}>
+          {isPending ? 'Guardando...' : 'Guardar'}
         </button>
       </div>
 
