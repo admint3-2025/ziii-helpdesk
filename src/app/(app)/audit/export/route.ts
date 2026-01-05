@@ -36,26 +36,104 @@ export async function GET() {
 
   const userMap = new Map((profiles ?? []).map((p) => [p.id, p]))
 
+  // Función helper para traducir acciones
+  const translateAction = (action: string) => {
+    const translations: Record<string, string> = {
+      'CREATE': 'Creación',
+      'UPDATE': 'Actualización',
+      'DELETE': 'Eliminación',
+      'EXPORT': 'Exportación',
+      'ASSIGN': 'Asignación',
+      'COMMENT': 'Comentario',
+      'CLOSE': 'Cierre',
+      'REOPEN': 'Reapertura',
+    }
+    return translations[action] || action
+  }
+
+  // Función helper para traducir tipos de entidad
+  const translateEntityType = (type: string) => {
+    const translations: Record<string, string> = {
+      'ticket': 'Ticket',
+      'user': 'Usuario',
+      'asset': 'Activo',
+      'report': 'Reporte',
+      'comment': 'Comentario',
+    }
+    return translations[type] || type
+  }
+
+  // Función helper para extraer detalles relevantes del metadata
+  const extractMetadataDetails = (metadata: any, action: string, entityType: string) => {
+    if (!metadata) return ''
+    
+    const details: string[] = []
+    
+    // Para tickets
+    if (entityType === 'ticket') {
+      if (metadata.title) details.push(`Título: ${metadata.title}`)
+      if (metadata.status) details.push(`Estado: ${metadata.status}`)
+      if (metadata.priority !== undefined) details.push(`Prioridad: P${metadata.priority}`)
+      if (metadata.assigned_to_name) details.push(`Asignado a: ${metadata.assigned_to_name}`)
+    }
+    
+    // Para usuarios
+    if (entityType === 'user') {
+      if (metadata.updates?.full_name) details.push(`Nombre: ${metadata.updates.full_name}`)
+      if (metadata.updates?.role) details.push(`Rol: ${metadata.updates.role}`)
+      if (metadata.email) details.push(`Email: ${metadata.email}`)
+      if (metadata.updates?.active !== undefined) details.push(`Estado: ${metadata.updates.active ? 'Activo' : 'Desactivado'}`)
+    }
+    
+    // Para activos
+    if (entityType === 'asset') {
+      if (metadata.asset_tag) details.push(`Tag: ${metadata.asset_tag}`)
+      if (metadata.asset_type) details.push(`Tipo: ${metadata.asset_type}`)
+      if (metadata.status) details.push(`Estado: ${metadata.status}`)
+      if (metadata.location_id) details.push(`Ubicación: ${metadata.location_id}`)
+    }
+    
+    // Para comentarios
+    if (action === 'COMMENT' && metadata.comment) {
+      const preview = metadata.comment.length > 100 
+        ? metadata.comment.substring(0, 100) + '...' 
+        : metadata.comment
+      details.push(`Comentario: ${preview}`)
+    }
+    
+    return details.length > 0 ? details.join(' | ') : ''
+  }
+
   const headers = [
-    'created_at',
-    'action',
-    'entity_type',
-    'entity_id',
-    'actor_name',
-    'actor_email',
-    'metadata_json',
+    'Fecha y Hora',
+    'Acción',
+    'Tipo de Entidad',
+    'ID Entidad',
+    'Usuario Responsable',
+    'Email',
+    'Detalles',
   ]
 
   const rows = (audit ?? []).map((a) => {
     const actor = a.actor_id ? userMap.get(a.actor_id) : null
+    const timestamp = a.created_at ? new Date(a.created_at).toLocaleString('es-MX', { 
+      timeZone: 'America/Mexico_City',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }) : ''
+    
     return [
-      a.created_at ? new Date(a.created_at).toISOString() : '',
-      a.action,
-      a.entity_type,
-      a.entity_id,
-      actor?.full_name || '',
+      timestamp,
+      translateAction(a.action),
+      translateEntityType(a.entity_type),
+      a.entity_id || '',
+      actor?.full_name || 'Sistema',
       actor?.email || '',
-      a.metadata ? JSON.stringify(a.metadata) : '',
+      extractMetadataDetails(a.metadata, a.action, a.entity_type),
     ]
   })
 
