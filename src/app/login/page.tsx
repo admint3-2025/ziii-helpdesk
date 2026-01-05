@@ -138,15 +138,10 @@ export default async function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500 mb-3">Plataforma protegida con autenticación segura</p>
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+            <div className="flex items-center justify-center text-xs text-gray-400">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span>Sistema operativo</span>
-              </div>
-              <span>•</span>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span>Cloud seguro</span>
+                <span>Sistema operativo seguro y monitoreado</span>
               </div>
             </div>
           </div>
