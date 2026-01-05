@@ -90,6 +90,10 @@ export async function PATCH(
     updates.can_view_beo = Boolean(body.can_view_beo)
   }
 
+  if (body?.can_manage_assets !== undefined) {
+    updates.can_manage_assets = Boolean(body.can_manage_assets)
+  }
+
   if (Object.keys(updates).length > 0) {
     const { error } = await admin.from('profiles').update(updates).eq('id', id)
     if (error) return new Response(error.message, { status: 400 })
@@ -117,6 +121,8 @@ export async function PATCH(
         floor: body?.floor,
         position: body?.position,
         location_id: body?.location_id,
+        can_view_beo: body?.can_view_beo,
+        can_manage_assets: body?.can_manage_assets,
         active: body?.active,
       },
     },

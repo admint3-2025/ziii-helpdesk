@@ -29,6 +29,7 @@ type UserRow = {
   location_id: string | null
   location_name: string | null
   can_view_beo: boolean | null
+  can_manage_assets: boolean | null
 }
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -61,6 +62,7 @@ export default function UserList() {
   const [editFloor, setEditFloor] = useState('')
   const [editLocationId, setEditLocationId] = useState<string>('')
   const [editCanViewBeo, setEditCanViewBeo] = useState(false)
+  const [editCanManageAssets, setEditCanManageAssets] = useState(false)
 
   // Filtros
   const [searchText, setSearchText] = useState('')
@@ -153,6 +155,7 @@ export default function UserList() {
     setEditFloor(u.floor ?? '')
     setEditLocationId(u.location_id ?? '')
     setEditCanViewBeo(u.can_view_beo ?? false)
+    setEditCanManageAssets(u.can_manage_assets ?? false)
   }
 
   async function saveEdit(userId: string) {
@@ -172,6 +175,7 @@ export default function UserList() {
           floor: editFloor.trim(),
           location_id: editLocationId || null,
           can_view_beo: editCanViewBeo,
+          can_manage_assets: editCanManageAssets,
         }),
       })
       const text = await res.text()
@@ -555,6 +559,24 @@ export default function UserList() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                   </svg>
                                   Acceso a Eventos BEO
+                                </span>
+                              </label>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">Gestión de activos</label>
+                              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                                <input
+                                  type="checkbox"
+                                  checked={editCanManageAssets}
+                                  onChange={(e) => setEditCanManageAssets(e.target.checked)}
+                                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <span className="text-xs text-gray-700 flex items-center gap-1">
+                                  <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                                  </svg>
+                                  Puede gestionar inventario y activos
                                 </span>
                               </label>
                             </div>

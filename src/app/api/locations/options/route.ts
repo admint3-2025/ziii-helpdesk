@@ -13,7 +13,7 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, can_manage_assets")
       .eq("id", user.id)
       .single()
 
@@ -21,8 +21,8 @@ export async function GET() {
       return NextResponse.json({ error: "Perfil no encontrado" }, { status: 403 })
     }
 
-    // Admin: usar client de servicio para traer todas las sedes
-    if (profile.role === "admin") {
+    // Admin o usuario con permiso global de activos: traer todas las sedes
+    if (profile.role === "admin" || profile.can_manage_assets === true) {
       const admin = createSupabaseAdminClient()
       const { data, error } = await admin
         .from("locations")

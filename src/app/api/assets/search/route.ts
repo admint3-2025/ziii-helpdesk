@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, location_id")
+      .select("role, location_id, can_manage_assets")
       .eq("id", user.id)
       .single()
 
@@ -25,12 +25,14 @@ export async function GET(request: Request) {
     const query = (searchParams.get("q") || "").trim()
     const locationId = (searchParams.get("locationId") || "").trim()
 
-    const adminClient = profile.role === "admin" ? createSupabaseAdminClient() : null
+    // Determinar si puede ver todos los activos
+    const canViewAllAssets = profile.role === "admin" || profile.can_manage_assets === true
+    const adminClient = canViewAllAssets ? createSupabaseAdminClient() : null
     const client = adminClient || supabase
 
-    // Para no-admin: validar sedes accesibles y forzar filtro
+    // Para no-admin sin permiso global: validar sedes accesibles y forzar filtro
     let allowedLocationIds: string[] = []
-    if (!adminClient) {
+    if (!canViewAllAssets) {
       const { data: userLocs } = await supabase
         .from("user_locations")
         .select("location_id")
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
 
     if (locationId) {
       assetQuery = assetQuery.eq("location_id", locationId)
-    } else if (!adminClient && allowedLocationIds.length) {
+    } else if (!canViewAllAssets && allowedLocationIds.length) {
       assetQuery = assetQuery.in("location_id", allowedLocationIds)
     }
 

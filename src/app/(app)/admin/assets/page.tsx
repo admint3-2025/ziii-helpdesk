@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import AssetFilters from './ui/AssetFilters'
 
 export default async function AssetsPage({
@@ -14,17 +15,19 @@ export default async function AssetsPage({
   const { data: { user } } = await supabase.auth.getUser()
   let userRole = 'user'
   let userLocations: any[] = []
+  let canManageAllAssets = false
   
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, can_manage_assets')
       .eq('id', user.id)
       .single()
     userRole = profile?.role || 'user'
+    canManageAllAssets = profile?.can_manage_assets || false
     
-    // Si no es admin, obtener sus sedes asignadas
-    if (userRole !== 'admin') {
+    // Si no es admin y no tiene permiso global de activos, obtener sus sedes asignadas
+    if (userRole !== 'admin' && !canManageAllAssets) {
       const { data: assignedLocations } = await supabase
         .from('user_locations')
         .select(`
@@ -36,8 +39,12 @@ export default async function AssetsPage({
     }
   }
   
+  // Siempre usar admin client para evitar problemas con RLS
+  // Aplicaremos el filtro de sedes manualmente según los permisos
+  const dbClient = createSupabaseAdminClient()
+  
   // Construir query base
-  let query = supabase
+  let query = dbClient
     .from('assets')
     .select(`
       *,
@@ -46,25 +53,40 @@ export default async function AssetsPage({
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  // Filtrar por sede según el rol del usuario
-  if (userRole !== 'admin' && userRole !== 'supervisor') {
-    // agent_l1 y agent_l2 solo ven activos de sus sedes asignadas
+  // Filtrar por sede según el rol del usuario y permisos
+  if (userRole !== 'admin' && !canManageAllAssets) {
+    // Solo usuarios sin permiso global ven activos filtrados por sede
     if (user) {
+      // Obtener sedes de user_locations
       const { data: userLocs } = await supabase
         .from('user_locations')
         .select('location_id')
         .eq('user_id', user.id)
       
-      const locationIds = userLocs?.map(ul => ul.location_id).filter(Boolean) || []
+      let locationIds = userLocs?.map(ul => ul.location_id).filter(Boolean) || []
+      
+      // Si no hay en user_locations, obtener del perfil
+      if (locationIds.length === 0) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('location_id')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileData?.location_id) {
+          locationIds.push(profileData.location_id)
+        }
+      }
       
       if (locationIds.length > 0) {
         query = query.in('location_id', locationIds)
       } else {
-        // Si no tiene sedes asignadas, no ver ningún activo
-        query = query.is('location_id', null)
+        // Si realmente no tiene sedes asignadas, no ver ningún activo
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000') // Query imposible = 0 resultados
       }
     }
   }
+  // Si es admin o tiene can_manage_assets=true, ve TODOS los activos (sin filtro adicional)
 
   // Aplicar filtros
   if (params.search) {
@@ -85,15 +107,15 @@ export default async function AssetsPage({
 
   const { data: assets, error } = await query
   
-  // Obtener sedes para el filtro según el rol del usuario
-  let locationsQuery = supabase
+  // Obtener sedes para el filtro según el rol del usuario y permisos
+  let locationsQuery = dbClient
     .from('locations')
     .select('id, name, code')
     .eq('is_active', true)
     .order('name')
   
-  // Si no es admin, filtrar por sedes asignadas
-  if (userRole !== 'admin' && user) {
+  // Si no es admin y no tiene permiso global, filtrar por sedes asignadas
+  if (userRole !== 'admin' && !canManageAllAssets && user) {
     const { data: userLocs } = await supabase
       .from('user_locations')
       .select('location_id')
@@ -323,10 +345,7 @@ export default async function AssetsPage({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{asset.location.code}</div>
-                              <div className="text-xs text-gray-500">{asset.location.name}</div>
-                            </div>
+                            <span className="text-sm text-gray-900">{asset.location.name}</span>
                           </div>
                         ) : (
                           <span className="text-xs text-gray-400 italic">Sin asignar</span>

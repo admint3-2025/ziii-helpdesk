@@ -601,7 +601,7 @@ export default function TicketCreateForm({ categories: initialCategories }: { ca
                     {asset.asset_tag} - {asset.asset_type}
                     {asset.brand && ` ${asset.brand}`}
                     {asset.model && ` ${asset.model}`}
-                    {asset.location_code && asset.location_name && `  b7 ${asset.location_code} - ${asset.location_name}`}
+                    {asset.location_name && ` • ${asset.location_name}`}
                     {asset.assigned_to_name && ` | Asignado a: ${asset.assigned_to_name}`}
                     {asset.status === 'MAINTENANCE' && ' [En mantenimiento]'}
                   </option>

@@ -14,9 +14,11 @@ type Location = {
 
 type AssetCreateFormProps = {
   locations: Location[]
+  canManageAllAssets: boolean
+  userRole: string
 }
 
-export default function AssetCreateForm({ locations }: AssetCreateFormProps) {
+export default function AssetCreateForm({ locations, canManageAllAssets, userRole }: AssetCreateFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     asset_tag: '',
@@ -43,6 +45,16 @@ export default function AssetCreateForm({ locations }: AssetCreateFormProps) {
     setIsSubmitting(true)
 
     const supabase = createSupabaseBrowserClient()
+
+    // Validar sede si no tiene permisos globales
+    if (userRole !== 'admin' && !canManageAllAssets) {
+      const locationIds = locations.map(l => l.id)
+      if (!formData.location_id || !locationIds.includes(formData.location_id)) {
+        alert('⚠️ No tienes autorización para crear activos en esta sede.\n\nSolo puedes crear activos en las sedes a las que estás asignado.')
+        setIsSubmitting(false)
+        return
+      }
+    }
 
     // Obtener usuario actual para created_by
     const { data: { user } } = await supabase.auth.getUser()
@@ -73,7 +85,14 @@ export default function AssetCreateForm({ locations }: AssetCreateFormProps) {
 
     if (error) {
       console.error('Error creating asset:', error)
-      alert(`Error al crear el activo: ${error.message}`)
+      
+      // Mensaje de error más claro
+      if (error.code === 'PGRST116' || error.message?.includes('violates row-level security')) {
+        alert('⚠️ No tienes autorización para crear activos.\n\nContacta con un administrador para obtener los permisos necesarios.')
+      } else {
+        alert(`Error al crear el activo: ${error.message}`)
+      }
+      
       setIsSubmitting(false)
       return
     }

@@ -40,6 +40,7 @@ export default function UserCreateForm() {
   const [locationId, setLocationId] = useState<string>('')
   const [locations, setLocations] = useState<Location[]>([])
   const [canViewBeo, setCanViewBeo] = useState(false)
+  const [canManageAssets, setCanManageAssets] = useState(false)
   const [invite, setInvite] = useState(true)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -91,6 +92,7 @@ export default function UserCreateForm() {
           position: position.trim(),
           location_id: locationId || null,
           can_view_beo: canViewBeo,
+          can_manage_assets: canManageAssets,
           invite,
           ...(invite ? {} : { password }),
         }),
@@ -114,6 +116,7 @@ export default function UserCreateForm() {
       setPosition('')
       setLocationId('')
       setCanViewBeo(false)
+      setCanManageAssets(false)
       setInvite(true)
       setPassword('')
     } catch (e: any) {
@@ -249,6 +252,23 @@ export default function UserCreateForm() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 Acceso a BEO (Eventos)
+              </span>
+            </label>
+          </div>
+
+          <div className="flex items-end">
+            <label className="flex items-center gap-1.5 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500"
+                checked={canManageAssets}
+                onChange={(e) => setCanManageAssets(e.target.checked)}
+              />
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+                Gestión de activos (inventario)
               </span>
             </label>
           </div>
