@@ -20,7 +20,7 @@ interface Asset {
   assigned_to: string | null
   purchase_date: string | null
   asset_location: { code: string; name: string } | null
-  assigned_user: { id: string; full_name: string; email: string } | null
+  assigned_user: { id: string; full_name: string; email: string } | null | undefined
 }
 
 interface Location {
