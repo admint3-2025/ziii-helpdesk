@@ -137,7 +137,10 @@ export default async function DashboardPage() {
   )
   if (recentError) dashboardErrors.push(recentError.message)
 
-  const recentTickets = (rawRecentTickets ?? []).sort((a, b) => {
+  const recentTickets = (rawRecentTickets ?? []).sort((
+    a: { status: string; created_at: string | null },
+    b: { status: string; created_at: string | null }
+  ) => {
     const aClosed = a.status === 'CLOSED'
     const bClosed = b.status === 'CLOSED'
 
