@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { getLocationFilter } from '@/lib/supabase/locations'
+import { getReportsLocationFilter } from '@/lib/supabase/reports-filter'
 import { StatusBadge, PriorityBadge, LevelBadge } from '@/lib/ui/badges'
 import { getCategoryPathLabel } from '@/lib/categories/path'
 import Link from 'next/link'
@@ -7,8 +7,8 @@ import Link from 'next/link'
 export default async function AllTicketsReportPage() {
   const supabase = await createSupabaseServerClient()
 
-  // Obtener filtro de ubicación
-  const locationFilter = await getLocationFilter()
+  // Obtener filtro de ubicación para reportes (supervisores sin permiso especial ven solo sus sedes)
+  const locationFilter = await getReportsLocationFilter()
 
   // Construir query base
   let query = supabase
@@ -29,9 +29,12 @@ export default async function AllTicketsReportPage() {
     `)
     .is('deleted_at', null)
 
-  // Aplicar filtro de ubicación
-  if (locationFilter) {
-    query = query.eq('location_id', locationFilter)
+  // Aplicar filtro de ubicación para supervisores sin permiso especial
+  if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+    query = query.in('location_id', locationFilter.locationIds)
+  } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+    // Supervisor sin sedes asignadas: no mostrar nada
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
   }
 
   // Obtener todos los tickets activos

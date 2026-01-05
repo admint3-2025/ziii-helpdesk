@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getReportsLocationFilter } from '@/lib/supabase/reports-filter'
 import Link from 'next/link'
 
 export const metadata = {
@@ -23,6 +24,9 @@ export default async function UserActivityReportPage() {
   if (!profile || !['admin', 'supervisor'].includes(profile.role)) {
     redirect('/dashboard')
   }
+
+  // Obtener filtro de ubicaciones para reportes
+  const locationFilter = await getReportsLocationFilter()
 
   // Usar admin client para consultas sin restricciones RLS
   const adminClient = createSupabaseAdminClient()
@@ -54,10 +58,20 @@ export default async function UserActivityReportPage() {
 
   {
     // Obtener todos los tickets con información completa
-    const { data: allTickets, error: ticketsError } = await adminClient
+    let ticketsQuery = adminClient
       .from('tickets')
-      .select('id, requester_id, assigned_agent_id, status, created_at, updated_at')
+      .select('id, requester_id, assigned_agent_id, status, created_at, updated_at, location_id')
       .is('deleted_at', null)
+
+    // Aplicar filtro de ubicación para supervisores sin permiso especial
+    if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+      ticketsQuery = ticketsQuery.in('location_id', locationFilter.locationIds)
+    } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+      // Supervisor sin sedes: no mostrar nada
+      ticketsQuery = ticketsQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+    }
+
+    const { data: allTickets, error: ticketsError } = await ticketsQuery
 
     if (ticketsError) {
       console.error('[UserActivity] Error cargando tickets:', JSON.stringify(ticketsError, null, 2))

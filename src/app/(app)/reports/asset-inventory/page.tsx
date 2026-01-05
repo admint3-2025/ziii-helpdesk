@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getReportsLocationFilter } from '@/lib/supabase/reports-filter'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AssetInventoryClient from './AssetInventoryClient'
@@ -26,14 +27,27 @@ export default async function AssetInventoryReportPage({
     redirect('/dashboard')
   }
 
+  // Obtener filtro de ubicaciones para reportes
+  const locationFilter = await getReportsLocationFilter()
+
   const adminSupabase = createSupabaseAdminClient()
 
-  // Obtener todas las sedes activas
-  const { data: locations } = await adminSupabase
+  // Obtener todas las sedes activas (o filtradas para supervisores sin permiso especial)
+  let locationsQuery = adminSupabase
     .from('locations')
     .select('id, name, code')
     .eq('is_active', true)
     .order('name')
+
+  // Si el supervisor no tiene acceso total, solo mostrar sus sedes en el dropdown
+  if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+    locationsQuery = locationsQuery.in('id', locationFilter.locationIds)
+  } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+    // Supervisor sin sedes: no mostrar opciones
+    locationsQuery = locationsQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: locations } = await locationsQuery
 
   // Construir query de activos
   let query = adminSupabase
@@ -62,7 +76,15 @@ export default async function AssetInventoryReportPage({
     .is('deleted_at', null)
     .order('asset_tag', { ascending: true })
 
-  // Aplicar filtros
+  // Aplicar filtro de ubicación para supervisores sin permiso especial (ANTES de otros filtros)
+  if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+    query = query.in('location_id', locationFilter.locationIds)
+  } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+    // Supervisor sin sedes: no mostrar nada
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  // Aplicar filtros del usuario (parámetros de búsqueda)
   if (params.location) {
     query = query.eq('location_id', params.location)
   }

@@ -2183,7 +2183,7 @@ export function locationSummaryEmailTemplate(params: {
               <p style="margin:0; font-size:11px; color:#9ca3af;">Prioriza estos casos para reducir el backlog de la sede.</p>
             </div>
 
-            $${openTicketsList.length
+            ${openTicketsList.length
               ? `
               <div style="border-radius:14px; border:1px solid rgba(148,163,184,0.5); background:radial-gradient(circle at top left, rgba(15,23,42,0.95), rgba(15,23,42,0.98)); overflow:hidden;">
                 <table style="width:100%; border-collapse:collapse;">
