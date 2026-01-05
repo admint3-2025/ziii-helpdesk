@@ -223,16 +223,6 @@ export default async function DashboardPage() {
           locationIds.push(profile.location_id)
         }
         
-        // DEBUG: Log para verificar filtrado
-        console.log('[DASHBOARD] Supervisor location filter:', {
-          userId: user.id,
-          role: profile.role,
-          profileLocationId: profile.location_id,
-          userLocations: userLocs,
-          finalLocationIds: locationIds,
-          error: userLocsError
-        })
-        
         // Filtrar por las sedes del supervisor
         if (locationIds.length > 0) {
           statsQuery = statsQuery.in('location_id', locationIds)
