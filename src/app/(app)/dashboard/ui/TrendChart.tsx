@@ -16,9 +16,24 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
 
   // Calcular métricas
   const totalTickets = data.reduce((sum, d) => sum + d.count, 0)
-  const avgPerDay = (totalTickets / data.length).toFixed(1)
-  const todayCount = data[data.length - 1]?.count || 0
-  const yesterdayCount = data[data.length - 2]?.count || 0
+  const avgPerDay = (totalTickets / Math.max(data.length, 1)).toFixed(1)
+
+  // Determinar la fecha "hoy" y "ayer" en la zona horaria local del navegador
+  const now = new Date()
+  const todayYear = now.getFullYear()
+  const todayMonth = String(now.getMonth() + 1).padStart(2, '0')
+  const todayDay = String(now.getDate()).padStart(2, '0')
+  const todayKey = `${todayYear}-${todayMonth}-${todayDay}`
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const yYear = yesterday.getFullYear()
+  const yMonth = String(yesterday.getMonth() + 1).padStart(2, '0')
+  const yDay = String(yesterday.getDate()).padStart(2, '0')
+  const yesterdayKey = `${yYear}-${yMonth}-${yDay}`
+
+  const todayCount = data.find((d) => d.date === todayKey)?.count ?? 0
+  const yesterdayCount = data.find((d) => d.date === yesterdayKey)?.count ?? 0
   const change = yesterdayCount > 0 
     ? ((todayCount - yesterdayCount) / yesterdayCount * 100).toFixed(0)
     : todayCount > 0 ? '+100' : '0'
@@ -213,7 +228,7 @@ export default function TrendChart({ data }: { data: TrendData[] }) {
         <div className="grid grid-cols-7 gap-0.5 text-[11px] mt-3">
           {data.map((item, idx) => {
             const isHovered = hoveredIndex === idx
-            const isToday = idx === data.length - 1
+            const isToday = item.date === todayKey
             // Parsear fecha local correctamente para evitar problema de zona horaria
             const [year, month, day] = item.date.split('-').map(Number)
             const dateObj = new Date(year, month - 1, day)
