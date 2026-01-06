@@ -8,14 +8,23 @@ function NavItem({ href, label, icon, badge }: { href: string; label: string; ic
   return (
     <Link
       href={href}
-      className="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700"
+      className="group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-blue-50 hover:via-indigo-50 hover:to-blue-50 hover:text-blue-700 hover:pl-4"
     >
-      <div className="flex-shrink-0 w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors">
-        {icon}
+      {/* Badge de color que aparece en hover */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      
+      <div className="relative flex-shrink-0">
+        <div className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors">
+          {icon}
+        </div>
+        {/* Punto decorativo */}
+        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
-      <span className="flex-1">{label}</span>
+      
+      <span className="flex-1 font-medium">{label}</span>
+      
       {badge && (
-        <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
+        <span className="flex-shrink-0 px-2.5 py-1 text-[10px] font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-md">
           {badge}
         </span>
       )}
@@ -25,9 +34,11 @@ function NavItem({ href, label, icon, badge }: { href: string; label: string; ic
 
 function NavSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1">
-      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        {title}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 px-3 pt-4 pb-2">
+        <div className="w-2 h-2 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm"></div>
+        <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">{title}</span>
+        <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></div>
       </div>
       {children}
     </div>
@@ -135,12 +146,14 @@ export default async function AppShell({ children }: { children: React.ReactNode
       <div className="flex-1">
         <div className="mx-auto max-w-7xl px-6 py-6 grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="card shadow-sm border border-slate-200 sticky top-6 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
-          <div className="card-body p-3">
-            <nav className="flex flex-col space-y-4">
+          <div className="card-body p-4">
+            <nav className="flex flex-col space-y-1">
               {/* Sección Principal */}
-              <div className="space-y-0.5">
-                <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Principal
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-3 pb-2">
+                  <div className="w-2 h-2 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm"></div>
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Principal</span>
+                  <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></div>
                 </div>
                 <NavItem 
                   href="/dashboard" 
@@ -175,9 +188,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
               </div>
 
               {/* Sección Análisis */}
-              <div className="space-y-0.5">
-                <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Análisis
+              <div className="space-y-1 mt-4">
+                <div className="flex items-center gap-2 px-3 pt-4 pb-2">
+                  <div className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 shadow-sm"></div>
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Análisis</span>
+                  <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></div>
                 </div>
                 <NavItem 
                   href="/reports" 
@@ -204,9 +219,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
 
               {/* Sección Administración */}
               {(profile?.role === 'admin' || profile?.role === 'supervisor') && (
-                <div className="space-y-0.5">
-                  <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Administración
+                <div className="space-y-1 mt-4">
+                  <div className="flex items-center gap-2 px-3 pt-4 pb-2">
+                    <div className="w-2 h-2 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm"></div>
+                    <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Administración</span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></div>
                   </div>
                   {/* Usuarios solo para admin */}
                   {profile?.role === 'admin' && (
@@ -246,29 +263,43 @@ export default async function AppShell({ children }: { children: React.ReactNode
               )}
 
               {/* Badge ITIL */}
-              <div className="pt-3 border-t border-gray-200">
-                <NavItem 
-                  href="/profile" 
-                  label="Mi Perfil" 
-                  icon={
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  }
-                />
+              <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
+                <Link
+                  href="/profile"
+                  className="group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-blue-50 hover:via-indigo-50 hover:to-blue-50 hover:text-blue-700 hover:pl-4"
+                >
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  
+                  <div className="relative flex-shrink-0">
+                    <div className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </div>
+                  
+                  <span className="flex-1 font-medium">Mi Perfil</span>
+                </Link>
               </div>
 
               {/* Badge ITIL */}
-              <div className="pt-3 border-t border-gray-200">
-                <div className="px-2 py-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                  <div className="flex items-center gap-1.5 text-blue-700 mb-0.5">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-[10px] font-semibold">ITIL v4</span>
+              <div className="mt-3">
+                <div className="mx-3 px-4 py-3 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 border-2 border-blue-200 shadow-sm relative overflow-hidden">
+                  {/* Decoración de fondo */}
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200/30 rounded-full -mr-8 -mt-8"></div>
+                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-indigo-200/30 rounded-full -ml-6 -mb-6"></div>
+                  
+                  <div className="relative flex items-center gap-2 text-blue-700 mb-1.5">
+                    <div className="p-1 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-sm">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-[11px] font-bold">ITIL v4 Based</span>
                   </div>
-                  <p className="text-[10px] text-blue-600">
-                    Mesa de ayuda certificada
+                  <p className="relative text-[10px] text-blue-600 leading-relaxed font-medium">
+                    Sistema profesional de gestión de servicios
                   </p>
                 </div>
               </div>
