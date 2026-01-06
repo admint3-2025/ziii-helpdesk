@@ -89,161 +89,248 @@ export default function LocationStatsTable({ rows }: { rows: LocationStatsRow[] 
   }
 
   return (
-    <div className="card shadow-lg border-0">
+    <div className="card shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50/30">
       <div className="card-body">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-sky-100 rounded-lg">
-              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M3 5h18M3 10h18M3 15h18M3 20h18"
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Estadísticas por sede</h3>
-              <p className="text-xs text-gray-600">
-                Haz clic en una sede para ver su detalle de incidencias
+              <h3 className="text-base font-bold text-gray-900 tracking-tight">Estadísticas por Sede</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Selecciona una ubicación para ver detalles operativos
               </p>
             </div>
           </div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-medium text-blue-700">{rows.length} sedes activas</span>
+          </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-3">
           {/* Tabla interactiva de sedes */}
-          <div className="lg:col-span-2 overflow-x-auto">
-            <table className="min-w-full text-xs">
-              <thead>
-                <tr className="text-left text-[11px] uppercase text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-3">Sede</th>
-                  <th className="py-2 px-3 text-right">Tickets</th>
-                  <th className="py-2 px-3 text-right">Abiertos</th>
-                  <th className="py-2 px-3 text-right">Cerrados</th>
-                  <th className="py-2 pl-3 text-right">Prom. resolución (días)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const isSelected = row.location_id === selectedLocationId
-                  const barWidth = `${(row.total_tickets / maxTotalTickets) * 100}%`
-                  return (
-                    <tr
-                      key={row.location_id}
-                      className={`border-b border-gray-100 last:border-0 cursor-pointer transition-colors hover:bg-sky-50 ${
-                        isSelected ? "bg-sky-50" : "bg-white"
-                      }`}
-                      onClick={() => setSelectedLocationId(row.location_id)}
-                    >
-                      <td className="py-1.5 pr-3 align-middle">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-semibold text-sky-700">[{row.location_code}]</span>
-                          <span className="text-xs text-gray-900 truncate">{row.location_name}</span>
-                        </div>
-                      </td>
-                      <td className="py-1.5 px-3 text-right text-xs text-gray-900 font-medium">{row.total_tickets}</td>
-                      <td className="py-1.5 px-3 text-right text-xs text-amber-700 font-medium">{row.open_tickets}</td>
-                      <td className="py-1.5 px-3 text-right text-xs text-emerald-700 font-medium">{row.closed_tickets}</td>
-                      <td className="py-1.5 pl-3 text-right text-xs text-gray-900 font-medium">
-                        {row.avg_resolution_days?.toFixed
-                          ? row.avg_resolution_days.toFixed(1)
-                          : row.avg_resolution_days}
-                      </td>
-                      <td className="hidden xl:table-cell w-24 pl-3">
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-1.5 bg-sky-400 rounded-full"
-                            style={{ width: barWidth }}
-                          ></div>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr className="text-left text-[10px] uppercase text-gray-600 font-semibold tracking-wider border-b-2 border-gray-200">
+                    <th className="py-3 px-4">Sede</th>
+                    <th className="py-3 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+                        </svg>
+                        <span>Total</span>
+                      </div>
+                    </th>
+                    <th className="py-3 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                        </svg>
+                        <span>Abiertos</span>
+                      </div>
+                    </th>
+                    <th className="py-3 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                        </svg>
+                        <span>Cerrados</span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {rows.map((row) => {
+                    const isSelected = row.location_id === selectedLocationId
+                    const barWidth = `${(row.total_tickets / maxTotalTickets) * 100}%`
+                    return (
+                      <tr
+                        key={row.location_id}
+                        className={`cursor-pointer transition-all duration-150 ${
+                          isSelected 
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 shadow-inner" 
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => setSelectedLocationId(row.location_id)}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {isSelected && (
+                              <div className="w-1 h-10 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full -ml-4 mr-2"></div>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md w-fit">
+                                {row.location_code}
+                              </span>
+                              <span className="text-xs text-gray-900 font-medium mt-1 truncate max-w-[200px]">
+                                {row.location_name}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-lg">
+                            <span className="text-sm font-bold text-gray-900">{row.total_tickets}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg">
+                            <span className="text-sm font-bold text-amber-700">{row.open_tickets}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg">
+                            <span className="text-sm font-bold text-emerald-700">{row.closed_tickets}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Panel de detalle de la sede seleccionada */}
-          <div className="border border-sky-100 rounded-xl p-3 bg-sky-50/60 flex flex-col gap-3 text-xs">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold text-sky-700 mb-0.5">Sede seleccionada</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  [{selected.location_code}] {selected.location_name}
+          <div className="border-2 border-blue-200 rounded-xl p-4 bg-gradient-to-br from-blue-50 via-white to-indigo-50 shadow-md flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                  </svg>
+                  <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Sede Seleccionada</p>
+                </div>
+                <p className="text-sm font-bold text-gray-900 leading-tight">
+                  {selected.location_name}
                 </p>
+                <p className="text-xs text-gray-600 mt-0.5">{selected.location_code}</p>
               </div>
-              <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-sky-700 border border-sky-100">
-                {selected.total_tickets} tickets
-              </span>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 shadow-md">
+                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+                </svg>
+                <span className="text-xs font-bold text-white">{selected.total_tickets}</span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-white border border-gray-100 px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Abiertos</p>
-                <p className="text-sm font-semibold text-amber-700">{selected.open_tickets}</p>
-                <p className="text-[10px] text-amber-600">{openPct}%</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white border-2 border-amber-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-amber-100 rounded-lg">
+                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                    </svg>
+                  </div>
+                  <p className="text-[10px] font-semibold text-amber-700 uppercase">Abiertos</p>
+                </div>
+                <p className="text-2xl font-bold text-amber-700 mb-0.5">{selected.open_tickets}</p>
+                <div className="flex items-center gap-1">
+                  <div className="h-1.5 flex-1 bg-amber-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${openPct}%` }}></div>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700">{openPct}%</span>
+                </div>
               </div>
-              <div className="rounded-lg bg-white border border-gray-100 px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Cerrados</p>
-                <p className="text-sm font-semibold text-emerald-700">{selected.closed_tickets}</p>
-                <p className="text-[10px] text-emerald-600">{closedPct}%</p>
+
+              <div className="rounded-xl bg-white border-2 border-emerald-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-emerald-100 rounded-lg">
+                    <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                  </div>
+                  <p className="text-[10px] font-semibold text-emerald-700 uppercase">Cerrados</p>
+                </div>
+                <p className="text-2xl font-bold text-emerald-700 mb-0.5">{selected.closed_tickets}</p>
+                <div className="flex items-center gap-1">
+                  <div className="h-1.5 flex-1 bg-emerald-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${closedPct}%` }}></div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700">{closedPct}%</span>
+                </div>
               </div>
-              <div className="rounded-lg bg-white border border-gray-100 px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Prom. resolución</p>
-                <p className="text-sm font-semibold text-gray-900">
+            </div>
+
+            <div className="rounded-xl bg-white border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">Tiempo promedio</p>
+                </div>
+                <p className="text-lg font-bold text-gray-900">
                   {selected.avg_resolution_days?.toFixed
                     ? selected.avg_resolution_days.toFixed(1)
-                    : selected.avg_resolution_days}{" "}
-                  d
+                    : selected.avg_resolution_days}
+                  <span className="text-xs text-gray-500 ml-0.5">días</span>
                 </p>
-                <p className="text-[10px] text-gray-500">días</p>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">Distribución de tickets</p>
-              <div className="h-2 w-full rounded-full bg-white border border-gray-100 overflow-hidden flex">
+              <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden flex shadow-inner">
                 <div
-                  className="h-full bg-amber-400"
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500"
                   style={{ width: `${openPct}%` }}
                   title={`${openPct}% abiertos`}
                 ></div>
                 <div
-                  className="h-full bg-emerald-400"
+                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500"
                   style={{ width: `${closedPct}%` }}
                   title={`${closedPct}% cerrados`}
                 ></div>
                 {otherPct > 0 && (
                   <div
-                    className="h-full bg-sky-300"
+                    className="h-full bg-gradient-to-r from-blue-300 to-blue-400"
                     style={{ width: `${otherPct}%` }}
                     title={`${otherPct}% otros estados`}
                   ></div>
                 )}
               </div>
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
                 {openPct > 0
-                  ? `${openPct}% de los tickets están abiertos en esta sede`
-                  : "No hay tickets abiertos actualmente en esta sede"}
+                  ? `${openPct}% de tickets en proceso • Distribución actualizada`
+                  : "✓ Todos los tickets han sido atendidos"}
               </p>
-              <div className="mt-2 flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(true)}
-                  className="inline-flex items-center justify-center rounded-md bg-sky-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:bg-sky-700 transition-colors"
-                >
-                  Generar y revisar resumen
-                </button>
-                {sendMessage && (
-                  <p className="text-[10px] text-gray-600">
-                    {sendMessage}
-                  </p>
-                )}
-              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:-translate-y-0.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Generar resumen ejecutivo
+            </button>
+            {sendMessage && (
+              <div className={`rounded-lg px-3 py-2 text-[10px] ${
+                sendMessage.includes('enviado') || sendMessage.includes('✓')
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}>
+                {sendMessage}
+              </div>
+            )}
           </div>
         </div>
       {showModal && (

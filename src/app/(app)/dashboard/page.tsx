@@ -351,11 +351,11 @@ export default async function DashboardPage() {
       ) : null}
 
       {/* KPIs principales - Estilo técnico profesional */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="h-1 w-1 rounded-full bg-blue-600"></div>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Métricas Operativas</h2>
+      <div className="pt-6">
+        <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-gray-200">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 tracking-tight">Métricas Operativas</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Indicadores clave de rendimiento en tiempo real</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -395,31 +395,33 @@ export default async function DashboardPage() {
       </div>
 
       {isAdminOrSupervisor && locationStats.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="h-1 w-1 rounded-full bg-emerald-600"></div>
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Estadísticas Multi-Sede</h2>
+        <div className="pt-8">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b-2 border-gray-200">
+            <div>
+              <h2 className="text-base font-bold text-gray-900 tracking-tight">Estadísticas Multi-Sede</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Análisis comparativo por ubicaciones</p>
             </div>
-            <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Todas las ubicaciones
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-xs font-medium text-emerald-700">Todas las ubicaciones</span>
             </div>
           </div>
           <LocationStatsTable rows={locationStats} />
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="h-1 w-1 rounded-full bg-purple-600"></div>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Análisis Detallado</h2>
+      <div className="pt-8">
+        <div className="flex items-center justify-between mb-6 pb-3 border-b-2 border-gray-200">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 tracking-tight">Análisis Detallado</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Tendencias, aging y activos asignados</p>
           </div>
-          <div className="text-xs text-gray-500 font-medium">Últimos 7 días</div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+            <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-medium text-purple-700">Últimos 7 días</span>
+          </div>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
           <TrendChart data={trendCounts} />
@@ -432,13 +434,18 @@ export default async function DashboardPage() {
       </div>
 
       {/* Gráficos y distribución */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="h-1 w-1 rounded-full bg-indigo-600"></div>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Distribución y Patrones</h2>
+      <div className="pt-8">
+        <div className="flex items-center justify-between mb-6 pb-3 border-b-2 border-gray-200">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 tracking-tight">Distribución y Patrones</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Estados y prioridades de tickets activos</p>
           </div>
-          <div className="text-xs text-gray-500 font-medium">Vista consolidada</div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <svg className="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z"/>
+            </svg>
+            <span className="text-xs font-medium text-indigo-700">Vista consolidada</span>
+          </div>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <StatusChart data={statusChartData} />
