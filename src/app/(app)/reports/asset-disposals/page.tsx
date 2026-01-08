@@ -104,38 +104,45 @@ export default async function AssetDisposalsReportPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <Link
-            href="/reports"
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            ← Volver a Reportes
-          </Link>
-          <h1 className="text-2xl font-semibold text-gray-900 mt-2">
-            Bajas de Activos
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Historial de solicitudes de baja con snapshot del activo
-          </p>
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-rose-600 via-red-600 to-orange-600 shadow-md mb-6">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24"></div>
+          <div className="relative z-10 px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/reports"
+                  className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </Link>
+                <div>
+                  <h1 className="text-xl font-bold text-white">Bajas de Activos</h1>
+                  <p className="text-rose-100 text-sm">Historial de solicitudes de baja con snapshot del activo</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Estadísticas */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-2xl font-semibold text-gray-900">{disposals.length}</div>
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total</div>
+            <div className="text-2xl font-bold text-gray-900">{disposals.length}</div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-2xl font-semibold text-amber-600">{pending}</div>
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pendientes</div>
+          <div className="bg-white rounded-lg border border-amber-200 p-4 shadow-sm">
+            <div className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">Pendientes</div>
+            <div className="text-2xl font-bold text-amber-600">{pending}</div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-2xl font-semibold text-green-600">{approved}</div>
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Aprobadas</div>
+          <div className="bg-white rounded-lg border border-green-200 p-4 shadow-sm">
+            <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Aprobadas</div>
+            <div className="text-2xl font-bold text-green-600">{approved}</div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-2xl font-semibold text-red-600">{rejected}</div>
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rechazadas</div>
+          <div className="bg-white rounded-lg border border-red-200 p-4 shadow-sm">
+            <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Rechazadas</div>
+            <div className="text-2xl font-bold text-red-600">{rejected}</div>
           </div>
         </div>
 

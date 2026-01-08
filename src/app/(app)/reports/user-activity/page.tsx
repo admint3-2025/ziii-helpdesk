@@ -232,16 +232,26 @@ export default async function UserActivityReportPage() {
   return (
     <main className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">👥 Actividad por Usuario</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Análisis detallado de tickets creados, modificados y cerrados por usuario
-          </p>
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 shadow-md">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24"></div>
+        <div className="relative z-10 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/reports"
+                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-white">Actividad por Usuario</h1>
+                <p className="text-violet-100 text-sm">Análisis detallado de tickets creados, modificados y cerrados por usuario</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <Link href="/reports" className="btn btn-secondary">
-          ← Volver a reportes
-        </Link>
       </div>
 
       {/* Métricas globales */}

@@ -87,16 +87,27 @@ export default async function AllTicketsReportPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reporte Completo de Tickets</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Vista detallada de todos los tickets activos en el sistema
-          </p>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 shadow-md">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24"></div>
+        <div className="relative z-10 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/reports"
+                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-white">Reporte Completo de Tickets</h1>
+                <p className="text-blue-100 text-sm">Vista detallada de todos los tickets activos en el sistema</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <a href="/reports" className="btn btn-secondary">
-          ← Volver a reportes
-        </a>
       </div>
 
       {/* Estadísticas resumen */}

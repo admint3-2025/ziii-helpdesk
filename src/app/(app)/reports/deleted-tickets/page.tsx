@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getLocationFilter } from '@/lib/supabase/locations'
 import { StatusBadge, PriorityBadge } from '@/lib/ui/badges'
+import Link from 'next/link'
 
 export default async function DeletedTicketsReportPage() {
   const supabase = await createSupabaseServerClient()
@@ -47,41 +48,51 @@ export default async function DeletedTicketsReportPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tickets Eliminados</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Auditoría completa de tickets eliminados con motivo y responsable
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a className="btn btn-secondary" href="/reports/deleted-tickets/export">
-            Descargar CSV
-          </a>
-          <a href="/reports" className="btn btn-secondary">
-            ← Volver a reportes
-          </a>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-700 via-gray-800 to-zinc-900 shadow-md">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24"></div>
+        <div className="relative z-10 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/reports"
+                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-white">Tickets Eliminados</h1>
+                <p className="text-gray-300 text-sm">Auditoría completa de tickets eliminados con motivo y responsable</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Resumen */}
-      <div className="card bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200">
-        <div className="card-body">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center text-3xl">
-              🗑️
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="card bg-gradient-to-br from-white to-red-50 border border-red-200">
+          <div className="p-4">
+            <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Total Eliminados</div>
+            <div className="text-2xl font-bold text-red-600 mt-1">{deletedTickets?.length ?? 0}</div>
+            <div className="text-xs text-gray-500 mt-1">Últimos 100 registros</div>
+          </div>
+        </div>
+        <div className="card bg-gradient-to-br from-white to-gray-50">
+          <div className="p-4">
+            <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Con Motivo</div>
+            <div className="text-2xl font-bold text-gray-900 mt-1">
+              {(deletedTickets ?? []).filter(t => t.deleted_reason).length}
             </div>
-            <div>
-              <div className="text-3xl font-bold text-red-700">
-                {deletedTickets?.length ?? 0}
-              </div>
-              <div className="text-sm text-red-600 font-medium">
-                Tickets eliminados (últimos 100)
-              </div>
-              <div className="text-xs text-red-500 mt-1">
-                Todos los registros mantienen trazabilidad completa
-              </div>
-            </div>
+          </div>
+        </div>
+        <div className="card bg-gradient-to-br from-white to-blue-50 border border-blue-200">
+          <div className="p-4">
+            <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Trazabilidad</div>
+            <div className="text-lg font-bold text-blue-600 mt-1">✓ Completa</div>
+            <div className="text-xs text-gray-500 mt-1">Todos con auditoría</div>
           </div>
         </div>
       </div>
