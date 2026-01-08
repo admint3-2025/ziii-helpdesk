@@ -59,6 +59,10 @@ export async function sendMail(params: {
       user: cfg.user,
       pass: cfg.pass,
     },
+    tls: {
+      // Permitir certificados auto-firmados
+      rejectUnauthorized: false,
+    },
   })
 
   await transporter.sendMail({
