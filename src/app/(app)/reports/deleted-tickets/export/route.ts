@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { toCsv } from '@/lib/reports/csv'
+import { getReportsLocationFilter } from '@/lib/supabase/reports-filter'
 
 export async function GET() {
   const supabase = await createSupabaseServerClient()
@@ -23,7 +24,11 @@ export async function GET() {
     return new Response('Forbidden', { status: 403 })
   }
 
-  const { data: deletedTickets } = await supabase
+  // Obtener filtro de ubicación para reportes
+  const locationFilter = await getReportsLocationFilter()
+
+  // Construir query base
+  let query = supabase
     .from('tickets')
     .select(
       `
@@ -39,6 +44,16 @@ export async function GET() {
     `,
     )
     .not('deleted_at', 'is', null)
+
+  // Aplicar filtro de ubicación
+  if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+    query = query.in('location_id', locationFilter.locationIds)
+  } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+    // Usuario sin sedes asignadas: no exportar nada
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: deletedTickets } = await query
     .order('deleted_at', { ascending: false })
     .range(0, 4999)
 

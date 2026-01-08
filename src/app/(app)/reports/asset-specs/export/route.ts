@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { toCsv } from '@/lib/reports/csv'
+import { getReportsLocationFilter } from '@/lib/supabase/reports-filter'
 
 export async function GET() {
   const supabase = await createSupabaseServerClient()
@@ -20,10 +21,13 @@ export async function GET() {
     return new Response('Forbidden', { status: 403 })
   }
 
+  // Obtener filtro de ubicación para reportes
+  const locationFilter = await getReportsLocationFilter()
+
   const adminSupabase = createSupabaseAdminClient()
 
-  // Obtener activos
-  const { data: assets } = await adminSupabase
+  // Construir query base
+  let query = adminSupabase
     .from('assets')
     .select(`
       id,
@@ -45,7 +49,16 @@ export async function GET() {
     `)
     .in('asset_type', ['DESKTOP', 'LAPTOP'])
     .is('deleted_at', null)
-    .order('asset_tag', { ascending: true })
+
+  // Aplicar filtro de ubicación (como admin usa adminClient, filtramos manualmente)
+  if (locationFilter.shouldFilter && locationFilter.locationIds.length > 0) {
+    query = query.in('location_id', locationFilter.locationIds)
+  } else if (locationFilter.shouldFilter && locationFilter.locationIds.length === 0) {
+    // Usuario sin sedes asignadas: no exportar nada
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: assets } = await query.order('asset_tag', { ascending: true })
 
   // Obtener usuarios asignados
   const assignedUserIds = [...new Set((assets ?? []).map(a => a.assigned_to).filter(Boolean))]
