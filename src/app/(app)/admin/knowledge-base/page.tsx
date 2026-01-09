@@ -23,7 +23,7 @@ export default async function KnowledgeBaseAdminPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['ADMIN', 'SUPERVISOR'].includes(profile.role)) {
+  if (!profile || !['admin', 'supervisor'].includes(profile.role)) {
     redirect('/tickets')
   }
 
