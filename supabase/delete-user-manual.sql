@@ -2,8 +2,8 @@
 -- PASO 1: Define aquí el ID del usuario a eliminar y el admin que heredará sus registros
 DO $$
 DECLARE
-  v_user_to_delete UUID := 'ce7581bf-1c67-40e1-b7e4-67c9bd8b542b'; -- Susi De la Torre
-  v_admin_replacement UUID := '5bbcb355-45de-49e8-858a-35d0bf96ccbf'; -- helpdesk@integrational3.com.mx
+  v_user_to_delete UUID := '4bf077f4-c1d2-4200-9a3f-edd9e04dd121'; -- Esteban Aguirre (proyectos@integrational3.com.mx)
+  v_admin_replacement UUID := 'fc87c49b-452a-4312-b85e-b002e7f63be8'; -- Ortiz Angel (sistemas@egdls.com)
 BEGIN
 
   -- 1. Transferir solicitudes de baja de activos
@@ -50,19 +50,24 @@ BEGIN
   SET changed_by = v_admin_replacement
   WHERE changed_by = v_user_to_delete;
 
-  -- 9. Eliminar relaciones de ubicaciones
+  -- 9. Transferir historial de cambios de estado de tickets
+  UPDATE ticket_status_history
+  SET actor_id = v_admin_replacement
+  WHERE actor_id = v_user_to_delete;
+
+  -- 10. Eliminar relaciones de ubicaciones
   DELETE FROM user_locations 
   WHERE user_id = v_user_to_delete;
 
-  -- 10. Eliminar notificaciones
+  -- 11. Eliminar notificaciones
   DELETE FROM notifications 
   WHERE user_id = v_user_to_delete;
 
-  -- 11. Eliminar de profiles
+  -- 12. Eliminar de profiles
   DELETE FROM profiles 
   WHERE id = v_user_to_delete;
 
-  -- 12. Finalmente eliminar de auth.users
+  -- 13. Finalmente eliminar de auth.users
   DELETE FROM auth.users 
   WHERE id = v_user_to_delete;
 
