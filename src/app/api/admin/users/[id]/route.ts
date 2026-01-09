@@ -165,9 +165,36 @@ export async function DELETE(
 
   const admin = createSupabaseAdminClient()
 
+  // Verificar que el usuario a eliminar existe
+  const { data: targetUser, error: getUserError } = await admin.auth.admin.getUserById(id)
+  if (getUserError || !targetUser) {
+    return new Response('Usuario no encontrado', { status: 404 })
+  }
+
+  // Verificar que no es el único admin
+  const { data: allUsers } = await admin.auth.admin.listUsers()
+  const adminCount = allUsers?.users.filter(u => 
+    u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
+  ).length || 0
+  
+  const isTargetAdmin = targetUser.user.app_metadata?.role === 'admin' || 
+                        targetUser.user.user_metadata?.role === 'admin'
+  
+  if (isTargetAdmin && adminCount <= 1) {
+    return new Response('No se puede eliminar el único usuario administrador del sistema', { status: 400 })
+  }
+
+  // Primero desactivamos el usuario en profiles
+  await admin.from('profiles').update({ active: false }).eq('id', id)
+
   // Soft delete keeps records around in Auth for traceability
   const { error } = await admin.auth.admin.deleteUser(id, true)
-  if (error) return new Response(error.message, { status: 400 })
+  if (error) {
+    return new Response(
+      `Error al eliminar usuario: ${error.message}. Intenta primero desactivar el usuario.`, 
+      { status: 400 }
+    )
+  }
 
   await admin.from('audit_log').insert({
     entity_type: 'user',
@@ -176,6 +203,7 @@ export async function DELETE(
     actor_id: user.id,
     metadata: {
       soft_delete: true,
+      target_email: targetUser.user.email,
     },
   })
 
