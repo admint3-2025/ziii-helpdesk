@@ -340,31 +340,36 @@ export async function generateDisposalPDF(data: DisposalData): Promise<void> {
   doc.setFont('helvetica', 'bold')
   doc.text('CÓDIGOS DE IDENTIFICACIÓN Y VERIFICACIÓN', margin + 4, y + 6)
   
-  // Columna izquierda: QR del Activo (si existe assetId)
+  // Columna izquierda: QR del Activo con información estática
   const leftX = margin + 10
-  if (data.assetId) {
-    try {
-      // Generar QR del activo con ALTA CALIDAD - apunta a página de detalle
-      const qrContent = getAssetQRContent(data.assetId)
-      const qrImage = await generateQRCode(qrContent, { size: 400, margin: 1, errorCorrectionLevel: 'H' })
-      
-      // QR code más grande y nítido
-      const qrSize = 45
-      doc.addImage(qrImage, 'PNG', leftX, y + 10, qrSize, qrSize)
-      
-      // Etiqueta
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'bold')
-      doc.text('QR Activo', leftX + qrSize / 2, y + qrSize + 12, { align: 'center' })
-      
-      doc.setFont('courier', 'normal')
-      doc.setFontSize(6)
-      const displayCode = data.assetCode || data.assetTag
-      doc.text(displayCode, leftX + qrSize / 2, y + qrSize + 16, { align: 'center' })
-    } catch (error) {
-      console.warn('No se pudo generar QR del activo:', error)
-    }
+  try {
+    // Generar QR con información del activo (no URL, para evitar 404 después de baja)
+    const qrContent = getAssetQRContent({
+      assetTag: data.assetTag,
+      assetType: data.assetType,
+      brand: data.brand,
+      model: data.model,
+      serialNumber: data.serialNumber,
+      status: 'DADO DE BAJA'
+    })
+    const qrImage = await generateQRCode(qrContent, { size: 400, margin: 1, errorCorrectionLevel: 'H' })
+    
+    // QR code más grande y nítido
+    const qrSize = 45
+    doc.addImage(qrImage, 'PNG', leftX, y + 10, qrSize, qrSize)
+    
+    // Etiqueta
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text('QR Activo', leftX + qrSize / 2, y + qrSize + 12, { align: 'center' })
+    
+    doc.setFont('courier', 'normal')
+    doc.setFontSize(6)
+    const displayCode = data.assetCode || data.assetTag
+    doc.text(displayCode, leftX + qrSize / 2, y + qrSize + 16, { align: 'center' })
+  } catch (error) {
+    console.warn('No se pudo generar QR del activo:', error)
   }
   
   // Columna central: Código de Verificación del documento

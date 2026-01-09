@@ -44,21 +44,35 @@ export async function generateQRCode(
 }
 
 /**
- * Genera URL completa para ver detalle de activo
- * @param assetId ID del activo (UUID)
+ * Genera información estática del activo para QR
+ * @param assetData Datos básicos del activo
  */
-export function getAssetQRUrl(assetId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  return `${baseUrl}/admin/assets/${encodeURIComponent(assetId)}`
+export function getAssetQRContent(assetData: {
+  assetTag: string
+  assetType: string
+  brand?: string
+  model?: string
+  serialNumber?: string
+  status?: string
+}): string {
+  // Información textual que siempre será visible, incluso si el activo fue dado de baja
+  const lines = [
+    `ACTIVO: ${assetData.assetTag}`,
+    `TIPO: ${assetData.assetType}`,
+  ]
+  
+  if (assetData.brand) lines.push(`MARCA: ${assetData.brand}`)
+  if (assetData.model) lines.push(`MODELO: ${assetData.model}`)
+  if (assetData.serialNumber) lines.push(`SERIE: ${assetData.serialNumber}`)
+  if (assetData.status) lines.push(`ESTADO: ${assetData.status}`)
+  
+  lines.push('') // Línea vacía
+  lines.push('Este activo ha sido procesado')
+  lines.push('para solicitud de baja.')
+  lines.push('Consultar documento oficial.')
+  
+  return lines.join('\n')
 }
-
-/**
- * Genera contenido del QR para el activo
- * @param assetId ID del activo (UUID)
- */
-export function getAssetQRContent(assetId: string): string {
-  // Simple: solo la URL de detalle del activo
-  return getAssetQRUrl(assetId)
   
   // Alternativa: JSON con más datos
   // return JSON.stringify({
