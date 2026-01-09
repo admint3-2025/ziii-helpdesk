@@ -291,6 +291,40 @@ export async function getPendingKBArticles(): Promise<{
 }
 
 /**
+ * Obtener todos los artículos aprobados
+ */
+export async function getApprovedKBArticles(): Promise<{
+  success: boolean
+  articles?: (KBArticle & {
+    creator?: { full_name: string }
+    source_ticket?: { ticket_number: number; title: string }
+  })[]
+  error?: string
+}> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    
+    const { data, error } = await supabase
+      .from('knowledge_base_articles')
+      .select(`
+        *,
+        creator:profiles!knowledge_base_articles_created_by_fkey(full_name),
+        source_ticket:tickets!knowledge_base_articles_source_ticket_id_fkey(ticket_number, title)
+      `)
+      .eq('status', 'approved')
+      .is('deleted_at', null)
+      .order('relevance_score', { ascending: false })
+    
+    if (error) throw error
+    
+    return { success: true, articles: data || [] }
+  } catch (error) {
+    console.error('Error getting approved KB articles:', error)
+    return { success: false, error: 'Error al obtener artículos aprobados' }
+  }
+}
+
+/**
  * Crear artículo manualmente
  */
 export async function createKBArticle(data: {
