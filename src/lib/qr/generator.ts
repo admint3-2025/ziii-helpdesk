@@ -73,12 +73,3 @@ export function getAssetQRContent(assetData: {
   
   return lines.join('\n')
 }
-  
-  // Alternativa: JSON con más datos
-  // return JSON.stringify({
-  //   type: 'asset',
-  //   code: assetCode,
-  //   url: getAssetQRUrl(assetCode),
-  //   timestamp: Date.now()
-  // })
-}
