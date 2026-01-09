@@ -248,14 +248,12 @@ export async function generateDisposalPDF(data: DisposalData): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // VERIFICAR ESPACIO PARA FIRMAS
+  // FORZAR NUEVA PÁGINA PARA FIRMAS Y QR CODES
   // ═══════════════════════════════════════════════════════════════
   
-  const signaturesNeededHeight = 75
-  if (y + signaturesNeededHeight > pageHeight - 30) {
-    doc.addPage()
-    y = 20
-  }
+  // SIEMPRE iniciar firmas y QR en página 2 para evitar sobreposiciones
+  doc.addPage()
+  y = 20
 
   // ═══════════════════════════════════════════════════════════════
   // AUTORIZACIONES - DISEÑO PROFESIONAL
@@ -420,32 +418,47 @@ export async function generateDisposalPDF(data: DisposalData): Promise<void> {
   y += 75
 
   // ═══════════════════════════════════════════════════════════════
-  // PIE DE PÁGINA
+  // PIE DE PÁGINA (en ambas páginas)
   // ═══════════════════════════════════════════════════════════════
   
-  const footerY = pageHeight - 12
+  const addFooter = (pageNum: number, totalPages: number) => {
+    const footerY = pageHeight - 12
+    
+    // Línea separadora
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.3)
+    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
+    
+    doc.setTextColor(120, 120, 120)
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      'DOCUMENTO OFICIAL - Válido únicamente con todas las firmas y sellos correspondientes.',
+      margin,
+      footerY
+    )
+    doc.text(
+      'Cualquier alteración invalida este documento. Conservar en archivo físico por 5 años.',
+      margin,
+      footerY + 4
+    )
+    
+    doc.text(`Folio: ${folio}`, pageWidth - margin, footerY, { align: 'right' })
+    doc.text(`Pág. ${pageNum} de ${totalPages}`, pageWidth - margin, footerY + 4, { align: 'right' })
+  }
   
-  // Línea separadora
-  doc.setDrawColor(200, 200, 200)
-  doc.setLineWidth(0.3)
-  doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
+  // Agregar footer a página 2 (actual)
+  addFooter(2, 2)
   
-  doc.setTextColor(120, 120, 120)
-  doc.setFontSize(6)
-  doc.setFont('helvetica', 'normal')
-  doc.text(
-    'DOCUMENTO OFICIAL - Válido únicamente con todas las firmas y sellos correspondientes.',
-    margin,
-    footerY
-  )
-  doc.text(
-    'Cualquier alteración invalida este documento. Conservar en archivo físico por 5 años.',
-    margin,
-    footerY + 4
-  )
-  
-  doc.text(`Folio: ${folio}`, pageWidth - margin, footerY, { align: 'right' })
-  doc.text('Pág. 1 de 1', pageWidth - margin, footerY + 4, { align: 'right' })
+  // Regresar a página 1 para agregar su footer
+  const currentPage = (doc.internal as { getCurrentPageInfo: () => { pageNumber: number } }).getCurrentPageInfo().pageNumber
+  if (currentPage === 2) {
+    // Ir a página 1
+    doc.setPage(1)
+    addFooter(1, 2)
+    // Regresar a página 2
+    doc.setPage(2)
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // DESCARGAR
