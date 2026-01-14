@@ -330,6 +330,78 @@ export default function UserList() {
     }
   }
 
+  async function sendCredentials(u: UserRow) {
+    if (!confirm(`¿Enviar credenciales de acceso a ${u.email ?? u.id}?\n\nSe generará una contraseña temporal y se enviará un email de bienvenida con las credenciales.`)) return
+    setError(null)
+    setBusy(true)
+    try {
+      // Primero generar la contraseña temporal
+      const resetRes = await fetch(`/api/admin/users/${u.id}/reset-password`, { method: 'POST' })
+      const resetText = await resetRes.text()
+      if (!resetRes.ok) {
+        setError(resetText || `Error ${resetRes.status}`)
+        return
+      }
+
+      let temporaryPassword: string | null = null
+      let passwordSent = false
+      try {
+        const parsed = JSON.parse(resetText)
+        temporaryPassword = parsed?.temporaryPassword ?? null
+        passwordSent = Boolean(parsed?.sent)
+      } catch {
+        // ignore
+      }
+
+      // Si el reset-password ya envió el email con la contraseña, usamos esa contraseña
+      // Si no, necesitamos la contraseña para enviar el email de bienvenida
+      if (passwordSent) {
+        // Ya se envió un email con la contraseña, podemos enviar el de bienvenida usando una flag especial
+        // o simplemente notificar que se completó
+        alert(`✅ Contraseña temporal generada y enviada.\n\nEl usuario recibirá un email con sus credenciales de acceso.`)
+        await load()
+        return
+      }
+
+      if (!temporaryPassword) {
+        setError('No se pudo generar la contraseña temporal.')
+        return
+      }
+
+      // Enviar email con las credenciales
+      const credRes = await fetch(`/api/admin/users/${u.id}/send-credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temporaryPassword }),
+      })
+      const credText = await credRes.text()
+      
+      if (!credRes.ok) {
+        // Si falla el envío, mostrar la contraseña al admin
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(temporaryPassword)
+        }
+        alert(`⚠️ No se pudo enviar el email, pero la contraseña fue generada:\n\n${temporaryPassword}\n\n(Copiada al portapapeles)\n\nError: ${credText}`)
+        return
+      }
+
+      let message = ''
+      try {
+        const parsed = JSON.parse(credText)
+        message = parsed?.message ?? 'Credenciales enviadas correctamente'
+      } catch {
+        message = 'Credenciales enviadas correctamente'
+      }
+
+      alert(`✅ ${message}\n\nEl usuario recibirá un email con sus credenciales de acceso.`)
+      await load()
+    } catch (e: any) {
+      setError(e?.message ?? 'Error inesperado')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="card overflow-hidden">
       <div className="p-4 pb-0 space-y-3">
@@ -642,6 +714,18 @@ export default function UserList() {
                                 }}
                               >
                                 {active ? 'Desactivar usuario' : 'Activar usuario'}
+                              </button>
+                              <button 
+                                className="btn text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" 
+                                type="button" 
+                                disabled={busy} 
+                                onClick={() => {
+                                  setEditingId(null)
+                                  sendCredentials(u)
+                                }}
+                                title="Enviar credenciales de acceso por email"
+                              >
+                                📧 Enviar credenciales
                               </button>
                               <button 
                                 className="btn btn-secondary text-xs px-3 py-1.5" 
